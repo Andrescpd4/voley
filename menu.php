@@ -17,8 +17,8 @@ $acceso = "'" . implode("','", $_SESSION['acceso_menu'] ?? array(1, 2)) . "'";
 $sql = "SELECT
             m.*,
             (SELECT COUNT(*) FROM admin_menu WHERE padre = m.menu) as hijos,
-            (SELECT 'S' FROM admin_permiso_menu p
-             WHERE p.menu = m.menu AND p.rol = '" . ($_SESSION['usuario_rol'] ?? 0) . "') as disponible
+            (SELECT 'S' FROM admin_permiso_menu p, admin_usuario u
+             WHERE u.rol_id = p.rol AND p.menu = m.menu AND u.persona_id = '" . ($_SESSION['persona_id'] ?? 0) . "') as disponible
         FROM admin_menu m
         WHERE m.visible = 'S' AND m.acceso IN ($acceso)
         ORDER BY m.orden, m.nombre";
@@ -34,7 +34,8 @@ function generarMenu($padre)
     }
 
     foreach ($menu_items as $rw) {
-        if (!isset($rw['padre']) || $rw['padre'] != $padre) {
+        $padre_rw = $rw['padre'] ?? "";
+        if ($padre_rw != $padre) {
             continue;
         }
 

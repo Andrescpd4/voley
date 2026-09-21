@@ -42,6 +42,12 @@
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/sweet-alert/sweetalert.min.js"></script>
     <!-- Toastify -->
     <link rel="stylesheet" type="text/css" href="<?php echo WEB_ROOT ?>plantilla/assets/libs/toastify-js/src/toastify.css">
+    <!-- Choices.js -->
+    <link rel="stylesheet" type="text/css" href="<?php echo WEB_ROOT ?>plantilla/assets/libs/choices.js/public/assets/styles/choices.min.css">
+    <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
+    <!-- flatpickr -->
+    <link rel="stylesheet" type="text/css" href="<?php echo WEB_ROOT ?>plantilla/assets/libs/flatpickr/flatpickr.min.css">
+    <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/flatpickr/flatpickr.min.js"></script>
 
     <script type="text/javascript">
         const BASE_URL = '<?php echo WEB_ROOT ?>inicio/';

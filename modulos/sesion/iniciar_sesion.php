@@ -2,9 +2,9 @@
 // ============================================================
 // SESION — Vista del formulario de login
 //
-// Se muestra cuando el usuario NO tiene sesion activa.
-// Usa efectos2.js para cifrar el formulario con AES antes
-// de enviarlo al backend.
+// Formulario de inicio de sesión de Voley+.
+// Envía POST a inicar-sesion/iniciar mediante fetch()
+// Guarda el token devuelto en localStorage('stp_k_l_t')
 // ============================================================
 ?>
 <!doctype html>
@@ -12,9 +12,9 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Iniciar sesion - Voley+</title>
+    <title>Iniciar Sesión - Voley+</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="Voley+" name="description" />
+    <meta content="Sistema de Gestión de Escuela de Voleibol" name="description" />
     <meta content="Voley+" name="author" />
 
     <link rel="shortcut icon" href="<?php echo WEB_ROOT ?>img/favicon.png">
@@ -30,16 +30,11 @@
     <!-- custom Css-->
     <link href="<?php echo WEB_ROOT ?>plantilla/assets/css/custom.min.css" rel="stylesheet" type="text/css" />
 
-    <!-- jQuery -->
-    <script src="<?php echo WEB_ROOT ?>js/jquery_3.4.1_jquery.min.js"></script>
-    <!-- CryptoJS AES -->
-    <script src="<?php echo WEB_ROOT ?>js/heaven/rollups/aes.js"></script>
     <!-- SweetAlert2 -->
     <link rel="stylesheet" type="text/css" href="<?php echo WEB_ROOT ?>plantilla/assets/css/sweetalert2.css">
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/sweet-alert/sweetalert.min.js"></script>
 
     <script type="text/javascript">
-        const menu = "<?php echo MENU ?>";
         const web_root = "<?php echo WEB_ROOT ?>";
         const page_root = "<?php echo PAGE_ROOT ?>";
     </script>
@@ -62,49 +57,56 @@
                     <div class="col-lg-12">
                         <div class="text-center mt-sm-5 mb-4 text-white-50">
                             <div>
-                                <a href="/voley/" class="d-inline-block auth-logo">
-                                    <img src="<?php echo WEB_ROOT ?>img/logo-icon.png" alt="" height="100">
+                                <a href="<?php echo WEB_ROOT ?>" class="d-inline-block auth-logo">
+                                    <img src="<?php echo WEB_ROOT ?>img/logo-icon.png" alt="Logo" height="80">
                                 </a>
                             </div>
-                            <p class="mt-3 fs-15 fw-medium">Voley+</p>
+                            <p class="mt-3 fs-16 fw-medium text-white">Voley+ Escuela Deportiva</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="row justify-content-center">
                     <div class="col-md-8 col-lg-6 col-xl-5">
-                        <div class="card mt-4 card-bg-fill">
+                        <div class="card mt-2 card-bg-fill">
                             <div class="card-body p-4">
                                 <div class="text-center mt-2">
-                                    <h5 class="text-primary">Iniciar sesion</h5>
-                                    <p class="text-muted">Ingresar usuario y contraseña para iniciar</p>
+                                    <h5 class="text-primary">¡Bienvenido!</h5>
+                                    <p class="text-muted">Ingresa tus credenciales para acceder al sistema</p>
                                 </div>
-                                <div class="p-2 mt-4">
-                                    <form class="needs-validation" novalidate id="formulario" method="POST" action="<?php echo WEB_ROOT ?>sesion/iniciar" autocomplete="off">
+                                <div class="p-2 mt-3">
+                                    <form id="formLogin" autocomplete="off">
                                         <div class="mb-3">
-                                            <label for="usuario" class="form-label">Usuario de ingreso<span class="text-danger">*</span></label>
-                                            <input type="text" name="usuario" id="usuario" class="form-control" placeholder="Ingrese Usuario" required>
-                                            <div class="invalid-feedback">Ingresar usuario</div>
+                                            <label for="usuario" class="form-label">Usuario o Documento <span class="text-danger">*</span></label>
+                                            <input type="text" name="usuario" id="usuario" class="form-control" placeholder="Ej: ADMIN o 10000001" required autofocus>
                                         </div>
 
                                         <div class="mb-3">
-                                            <label class="form-label" for="clave">Contraseña<span class="text-danger">*</span></label>
+                                            <label class="form-label" for="clave">Contraseña <span class="text-danger">*</span></label>
                                             <div class="position-relative auth-pass-inputgroup">
-                                                <input type="password" class="form-control pe-5 password-input" name="clave" id="clave" placeholder="Ingrese Contraseña" required>
-                                                <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none" type="button" id="password-addon"><i class="ri-eye-fill align-middle"></i></button>
-                                                <div class="invalid-feedback">Ingresar contraseña</div>
+                                                <input type="password" class="form-control pe-5" name="clave" id="clave" placeholder="Ingresa tu contraseña" required>
+                                                <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted" type="button" id="btnToggleClave">
+                                                    <i class="ri-eye-fill align-middle" id="iconoClave"></i>
+                                                </button>
                                             </div>
                                         </div>
 
                                         <div class="mt-4">
-                                            <button class="btn btn-success w-100" type="submit">Ingresar</button>
+                                            <button class="btn btn-primary w-100" type="submit" id="btnIngresar">
+                                                <span id="btnTexto"><i class="ri-login-box-line me-1"></i> Ingresar</span>
+                                                <span id="btnCargando" style="display: none;">
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    Verificando...
+                                                </span>
+                                            </button>
                                         </div>
                                     </form>
-                                    <div id="cargar" style="display: none; text-align: center;">
-                                        <img src="<?php echo WEB_ROOT ?>img/loader.gif">
-                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mt-3 text-center">
+                            <p class="mb-0 text-muted">¿Problemas para acceder? Contacta a la administración.</p>
                         </div>
                     </div>
                 </div>
@@ -116,7 +118,7 @@
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="text-center">
-                            <p class="mb-0 text-muted">&copy; <script>document.write(new Date().getFullYear())</script> Voley+</p>
+                            <p class="mb-0 text-muted">&copy; <?php echo date('Y'); ?> Voley+ — Sistema de Gestión Deportiva</p>
                         </div>
                     </div>
                 </div>
@@ -129,13 +131,103 @@
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/simplebar/simplebar.min.js"></script>
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/node-waves/waves.min.js"></script>
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/feather-icons/feather.min.js"></script>
-    <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
-    <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/plugins.js"></script>
-    <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/particles.js/particles.js"></script>
-    <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/pages/particles.app.js"></script>
-    <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/pages/form-validation.init.js"></script>
 
-    <!-- Login JS -->
-    <script src="<?php echo WEB_ROOT ?>js/heaven/efectos2.js"></script>
+    <script>
+        // 1. Alternar visibilidad de contraseña
+        var btnToggle = document.getElementById('btnToggleClave');
+        var inputClave = document.getElementById('clave');
+        var iconoClave = document.getElementById('iconoClave');
+
+        if (btnToggle) {
+            btnToggle.addEventListener('click', function() {
+                if (inputClave.type === 'password') {
+                    inputClave.type = 'text';
+                    iconoClave.className = 'ri-eye-off-fill align-middle';
+                } else {
+                    inputClave.type = 'password';
+                    iconoClave.className = 'ri-eye-fill align-middle';
+                }
+            });
+        }
+
+        // 2. Enviar formulario de login vía AJAX
+        var formLogin = document.getElementById('formLogin');
+        var btnIngresar = document.getElementById('btnIngresar');
+        var btnTexto = document.getElementById('btnTexto');
+        var btnCargando = document.getElementById('btnCargando');
+
+        formLogin.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var usuario = document.getElementById('usuario').value.trim();
+            var clave = document.getElementById('clave').value;
+
+            if (usuario === '' || clave === '') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos obligatorios',
+                    text: 'Por favor ingresa tu usuario y contraseña'
+                });
+                return;
+            }
+
+            // Mostrar estado de carga
+            btnIngresar.disabled = true;
+            btnTexto.style.display = 'none';
+            btnCargando.style.display = 'inline-block';
+
+            var formData = new FormData();
+            formData.append('usuario', usuario);
+            formData.append('clave', clave);
+
+            fetch(web_root + 'iniciar-sesion/iniciar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(res) {
+                return res.json();
+            })
+            .then(function(data) {
+                if (data.error === false) {
+                    // Guardar JWT en localStorage
+                    if (data.token) {
+                        localStorage.setItem('stp_k_l_t', data.token);
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Ingreso Exitoso!',
+                        text: data.msg || 'Bienvenido al sistema',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+
+                    setTimeout(function() {
+                        window.location.href = data.redirect || (web_root + 'inicio');
+                    }, 1000);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Acceso Denegado',
+                        text: data.msg || 'Credenciales incorrectas'
+                    });
+                    btnIngresar.disabled = false;
+                    btnTexto.style.display = 'inline-block';
+                    btnCargando.style.display = 'none';
+                }
+            })
+            .catch(function(err) {
+                console.error(err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'No se pudo contactar con el servidor. Verifica tu conexión.'
+                });
+                btnIngresar.disabled = false;
+                btnTexto.style.display = 'inline-block';
+                btnCargando.style.display = 'none';
+            });
+        });
+    </script>
 </body>
 </html>

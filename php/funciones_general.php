@@ -205,18 +205,32 @@ function get_token($data, $pass)
 }
 
 // --------------------------------------------------------//
-// HASH DE CONTRASEÑAS
+// HASH DE CONTRASEÑAS (BCRYPT NATIVO)
 // --------------------------------------------------------//
 
 function clave($clave, $extra1 = "voley", $extra2 = "plus2024")
 {
-    if (CRYPT_SHA512 == 1) {
-        $salt1 = "{$extra1}bP5MrcqS7wsMXUPJ";
-        $salt2 = "{$extra1}QvMQcHJXNhCtAmvy";
-        $v = crypt($clave, '$6$rounds=6000$' . $salt1 . '$');
-        return md5(sha1($v) . md5($salt2) . sha1($extra2));
+    // Retorna hash bcrypt seguro para contraseñas
+    return password_hash($clave, PASSWORD_BCRYPT, ['cost' => 10]);
+}
+
+function verificar_clave($clave, $hash)
+{
+    // 1. Si es hash bcrypt/argon (empieza con $)
+    if (str_starts_with($hash, '$')) {
+        return password_verify($clave, $hash);
     }
-    return md5($clave);
+    
+    // 2. Compatibilidad con SHA512 legado si existiera
+    $salt1 = "voleybP5MrcqS7wsMXUPJ";
+    $salt2 = "voleyQvMQcHJXNhCtAmvy";
+    $v = crypt($clave, '$6$rounds=6000$' . $salt1 . '$');
+    $legacy = md5(sha1($v) . md5($salt2) . sha1("plus2024"));
+    if ($hash === $legacy || $hash === md5($clave)) {
+        return true;
+    }
+    
+    return false;
 }
 
 // --------------------------------------------------------//
@@ -408,4 +422,16 @@ function eliminar_tildes($cadena)
         $cadena
     );
     return $cadena;
+}
+
+function limpiarString($texto){
+    $texto = preg_replace("/[\r\n|\n|\r]+/", PHP_EOL,$texto);
+    $texto = str_replace('\r\n', "",$texto); 
+    $texto = trim($texto);   
+
+    $texto = str_replace('\n',PHP_EOL,$texto);
+    $texto = str_replace('\r',PHP_EOL,$texto);
+    $texto = str_replace("'", "\'",$texto);
+    $texto = str_replace("\\"," ", $texto);  
+    return $texto; 
 }
