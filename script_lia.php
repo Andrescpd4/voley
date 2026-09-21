@@ -1,72 +1,151 @@
-<?php
-// ============================================================
-// SCRIPT_LIA.PHP — Scripts globales personalizados
-// Se incluye en cabeza.php
-// ============================================================
-?>
-<!-- Scripts personalizados globales -->
-<script>
-    // Funciones utilitarias globales
-    window.VoleyPlus = {
-        // Mostrar toast
-        toast: function(mensaje, tipo = 'info') {
-            if (typeof Toastify !== 'undefined') {
-                var colores = {
-                    'exito': 'linear-gradient(to right, #00b09b, #96c93d)',
-                    'error': 'linear-gradient(to right, #ff5f6d, #ffc371)',
-                    'info':  'linear-gradient(to right, #1e88e5, #42a5f5)',
-                    'aviso': 'linear-gradient(to right, #f7971e, #ffd200)'
-                };
-                Toastify({
-                    text: mensaje,
-                    duration: 5000,
-                    gravity: 'top',
-                    position: 'right',
-                    style: { background: colores[tipo] || colores['info'] },
-                    close: true
-                }).showToast();
-            }
-        },
-        
-        // Confirmación SweetAlert2
-        confirmar: function(titulo, texto, callback) {
-            Swal.fire({
-                title: titulo,
-                text: texto,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, continuar',
-                cancelButtonText: 'Cancelar'
-            }).then(function(result) {
-                if (result.isConfirmed && callback) callback();
+    <script src="<?php echo WEB_ROOT ?>js/heaven/rollups/aes.js"></script>
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/jquery_ui/jquery-ui.js"></script>
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/jquery/validation.js"></script> 
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/general.js"></script>
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/grid.js"></script>
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/jquery.extra.js?t=1"></script>
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/pagination.js"></script>
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/vue.min.js"></script>
+   
+    <script type='text/javascript' src='<?php echo WEB_ROOT ?>plantilla/assets/libs/choices.js/public/assets/scripts/choices.min.js'></script>
+    
+  
+    <script src="<?php echo WEB_ROOT ?>js/heaven/toastDemo.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/heaven/desktop-notification.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/heaven.js"></script>
+
+    <script src="<?php echo WEB_ROOT ?>js/multi_select/jquery.sumoselect.js"></script>
+    <link href="<?php echo WEB_ROOT ?>js/multi_select/sumoselect.css" rel="stylesheet" />
+
+    <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/formulario_basico_v2.js"></script>
+    <link href="<?php echo WEB_ROOT ?>js/crud/bootstrap-table.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+    <script src="<?php echo WEB_ROOT ?>js/crud/tableExport.min.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/crud/bootstrap-table.min.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/crud/bootstrap-table-locale-all.min.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/crud/bootstrap-table-export.min.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/crud/bootstrap-table-mobile.min.js"></script>
+
+    <!-- Resources -->
+    <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/themes/material.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
+    <script src="<?php echo WEB_ROOT ?>js/graficar.js"></script>
+
+
+   
+
+
+    <script type="text/javascript">
+
+        $(document).ready(function(e) {
+           $("input, select, textarea").change(function(e){
+              $(e.target).removeClass("error");  
+           });
+
+           set_token();
+
+           $('.js-example-basic-multiple').select2({
+              placeholder: 'Seleccione varias opciones...',
+           });
+           $('.js-example-basic-single').select2({
+              placeholder: 'Seleccione una opción...',
+           });
+           
+           $('.select_auto').select2({
+              placeholder: 'Seleccione una opción...',
+           });
+           
+           $('.select_auto_multiple').select2({
+             placeholder: 'Seleccione varias opciones...',
+           });
+            
+            $('.select_auto2').SumoSelect({search: true, 
+              searchText: 'Seleccione...',
+              placeholder: 'Seleccione...',
+              captionFormat: '{0} Seleccionados',
+              captionFormatAllSelected: '{0} Todos Seleccionados!',
+              noMatch : 'No hay coincidencias para "{0}"',
+              locale :  [ 'Aceptar' ,  'Cancelar' ,  'Seleccionar todo' ],
+              nativeOnDevice: ['Android', 'BlackBerry', 'iPhone', 'iPad', 'iPod', 'Opera Mini', 'IEMobile', 'Silk'],
+              showTitle : 'true',
+              selectAll:false,
+
             });
-        },
-        
-        // AJAX genérico
-        ajax: function(url, datos, callback, metodo = 'POST') {
-            var fd = new FormData();
-            for (var key in datos) {
-                if (Array.isArray(datos[key])) {
-                    datos[key].forEach(function(v) { fd.append(key + '[]', v); });
-                } else {
-                    fd.append(key, datos[key]);
+
+            $('.select_auto2_full').SumoSelect({search: true, 
+              searchText: 'Seleccione...',
+              placeholder: 'Seleccione...',
+              captionFormat: '{0} Seleccionados',
+              captionFormatAllSelected: '{0} Todos Seleccionados!',
+              noMatch : 'No hay coincidencias para "{0}"',
+              locale :  [ 'Aceptar' ,  'Cancelar' ,  'Seleccionar todo' ],
+              nativeOnDevice: ['Android', 'BlackBerry', 'iPhone', 'iPad', 'iPod', 'Opera Mini', 'IEMobile', 'Silk'],
+              showTitle : 'true',
+              selectAll:true,
+
+            });
+        });
+
+
+function tablesorte(id,pageLength=25,order=0,forma_orden="asc") {
+  var nFilas = $('#'+id).length;
+
+  if (nFilas<=1) {
+      
+       if($("#"+id).hasClass('dataTable')) {
+
+       }else{
+         
+        $.fn.dataTable.ext.errMode = 'none';                 
+        $('#'+id).DataTable( {
+            "scrollX": true,
+            "scrollY": true,
+            "fixedHeader": true,
+            "responsive": false,
+            "language": {
+            "url": "js/datatable/spanish.json"
+          },
+            "pageLength": pageLength,
+            "order": [[ order, forma_orden ]],     
+            dom: 'Bfrtip',
+            buttons: [
+                {
+                   extend: 'excel',
+                   title: 'Exportar Excel'
                 }
-            }
-            fetch(url, {
-                method: metodo,
-                headers: { 'Authorization': localStorage.getItem('stp_k_l_t') || '' },
-                body: fd
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) { if (callback) callback(data); })
-            .catch(function(e) { console.error(e); VoleyPlus.toast('Error de conexión', 'error'); });
-        },
-        
-        // Escape HTML
-        esc: function(texto) {
-            var div = document.createElement('div');
-            div.textContent = texto;
-            return div.innerHTML;
-        }
-    };
-</script>
+              ]
+          });
+         
+       }     
+    }
+
+    setTimeout(function() {
+      $(".dt-button").addClass('btn');
+      $(".dt-button").addClass('btn-outline-success');
+    }, 100);
+   
+  }
+
+
+function paginadorInit(startPage,perPage,containerID,paginadorClass){
+    minHeight = false;
+    $(paginadorClass).jPages({
+        containerID  : containerID,
+        perPage      : perPage,
+        startPage    : startPage,
+        startRange   : 1,
+        midRange     : 5,
+        endRange     : 1,
+        first        : '',
+        previous     : 'Anterior',
+        next         : 'Siguiente',
+        last         : '',
+        minHeight    : minHeight,
+        callback     : function(pages,items){
+                       }
+    });    
+}
+</script> 
+

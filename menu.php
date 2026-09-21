@@ -18,7 +18,8 @@ $sql = "SELECT
             m.*,
             (SELECT COUNT(*) FROM admin_menu WHERE padre = m.menu) as hijos,
             (SELECT 'S' FROM admin_permiso_menu p, admin_usuario u
-             WHERE u.rol_id = p.rol AND p.menu = m.menu AND u.persona_id = '" . ($_SESSION['persona_id'] ?? 0) . "') as disponible
+             WHERE (u.rol_id = p.rol AND p.menu = m.menu AND u.persona_id = '" . ($_SESSION['persona_id'] ?? 0) . "')
+                OR (p.rol = '" . ($_SESSION['usuario_rol'] ?? 0) . "' AND p.menu = m.menu) LIMIT 1) as disponible
         FROM admin_menu m
         WHERE m.visible = 'S' AND m.acceso IN ($acceso)
         ORDER BY m.orden, m.nombre";
@@ -45,8 +46,8 @@ function generarMenu($padre)
             $href = "#" . $rw['menu'];
         }
 
-        // Verificar si es menu con acceso por rol
-        if (isset($rw['acceso']) && $rw['acceso'] == "7" && isset($rw['disponible']) && $rw['disponible'] != "S") {
+        // Verificar si es menu con acceso por rol (acceso 7 requiere permiso explícito)
+        if ($rw['acceso'] == "7" && ($rw['disponible'] ?? '') != "S") {
             continue;
         }
 

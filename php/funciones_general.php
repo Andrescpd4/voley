@@ -54,7 +54,7 @@ function obtener_ruta_menu($menu, $accion)
                          WHERE p.menu = '" . $db->escape_string($menu) . "' AND p.rol = '" . ($_SESSION['usuario_rol'] ?? 0) . "'";
                 $p = $db->select_one($sql2);
 
-                if (!$p) {
+                if (empty($p)) {
                     return array("error" => true, "msg" => "Acceso denegado al menu");
                 }
 
@@ -66,7 +66,7 @@ function obtener_ruta_menu($menu, $accion)
                 if ($requiere_permiso == 'S') {
                     $sql4 = "SELECT id FROM admin_permiso_accion WHERE rol = '" . ($_SESSION['usuario_rol'] ?? 0) . "' AND accion = '" . $datos_accion['id'] . "'";
                     $permiso_accion = $db->select_one($sql4);
-                    if (!$permiso_accion) {
+                    if (empty($permiso_accion)) {
                         return array("error" => true, "msg" => "Acceso denegado a la accion");
                     }
                 }

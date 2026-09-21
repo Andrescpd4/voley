@@ -1,37 +1,4 @@
 let hash_global;
-
-// Funcion para mostrar mensajes de alerta
-function msg(cont, texto, tipo) {
-    if (typeof cont === 'string' && arguments.length === 1) {
-        // Uso simple: msg('mensaje')
-        alert(cont);
-        return;
-    }
-    if (typeof cont === 'string' && texto && !tipo) {
-        // Uso: msg('mensaje', 'tipo')
-        alert(cont);
-        return;
-    }
-    // Uso completo: msg(elemento, 'texto', 'error|exito')
-    var elemento = (typeof cont === 'string') ? $(cont) : cont;
-    if (elemento && elemento.length) {
-        elemento.html(texto);
-        elemento.addClass('alert alert-dismissible fade show');
-        if (tipo === 'error') {
-            elemento.addClass('alert-danger');
-        } else if (tipo === 'exito') {
-            elemento.addClass('alert-success');
-        } else if (tipo === 'warning') {
-            elemento.addClass('alert-warning');
-        } else {
-            elemento.addClass('alert-info');
-        }
-        elemento.show();
-    } else {
-        // Si no hay elemento, usar alert del navegador
-        alert(texto || cont);
-    }
-}
 $(document).ready(function () {
     $("body").on("contextmenu",function(e){
        //return false;

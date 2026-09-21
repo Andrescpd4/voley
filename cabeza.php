@@ -56,6 +56,10 @@
         const page_root = "<?php echo PAGE_ROOT ?>";
         let TOKEN_GLOBAL = localStorage.getItem('stp_k_l_t') || '';
     </script>
+    <?php
+        include_once 'script_lia.php';
+        include_once 'style_lia.php';
+    ?>
 </head>
 
 <body>

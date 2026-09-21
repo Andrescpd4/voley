@@ -332,7 +332,7 @@
 
     function ajaxRequest(params) {
 
-        let elements = document.getElementById('form-busqueda').elements; // TOMO LOS ELEMENTOS DEL FORM
+        var elements = document.getElementById('form-busqueda').elements; // TOMO LOS ELEMENTOS DEL FORM
         for (var i = 0, element; element = elements[i++];) {
             params.data[element.name] = $.trim(element.value);
         }
