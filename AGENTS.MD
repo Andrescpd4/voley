@@ -621,3 +621,34 @@ voley/
 // Guardar suscripción del navegador
 // Enviar notificación: nuevo comunicado, documento rechazado, autorización pendiente
 ```
+## Arquitectura de Software y Prevención de Código Espagueti
+
+Para mantener el proyecto mantenible y evitar la mezcla desordenada de lenguajes (PHP, HTML, CSS, JavaScript) en un solo archivo, se deben seguir estrictamente las siguientes reglas de separación de responsabilidades:
+
+### 1. Rol de los Archivos Orquestadores (PHP)
+* Los archivos que actúen como "Orquestadores de Vista" (ej. `orquestador.php`) tienen la **única responsabilidad** de preparar el entorno, definir el contexto (`MODULO`), e incluir los recursos necesarios en el orden correcto.
+* **Prohibido:** No deben contener lógica extensa de JavaScript en línea, ni dibujar la estructura HTML de formularios o componentes.
+* Su estructura debe limitarse a:
+  1. Definición de constantes de contexto.
+  2. Inclusión de hojas de estilo (`<link rel="stylesheet">`).
+  3. Inclusión de scripts de librerías externas y del módulo (`<script src="...">`).
+  4. Mapeo controlado de variables globales del servidor al entorno de cliente (ej. `TOKEN_GLOBAL`, `page_root`).
+  5. Inclusión del archivo de contenido real mediante `include_once`.
+
+### 2. Separación de JavaScript (Lógica de Interfaz)
+* Toda la lógica de control del lado del cliente, peticiones asíncronas (`$.ajax`), funciones de renderizado, y listeners de eventos **deben vivir exclusivamente** en archivos `.js` independientes dentro de la ruta correspondiente (ej. `js/modulos/`).
+* Se deben mantener las funciones desacopladas del HTML, utilizando el espacio de nombres existente (ej. prefijo `gc` como en `gcAjax`, `gcGuardarTema`).
+
+### 3. Separación del Contenido (Vistas)
+* La estructura HTML pura de la interfaz (inputs, formularios, contenedores de pestañas) debe aislarse en archivos específicos de contenido (ej. `formulario_content.php`). Estos archivos no deben redeclarar librerías globales que ya fueron inyectadas por el orquestador.
+
+---
+**Ejemplo de Estructura Correcta para Nuevos Módulos o Refactorizaciones:**
+
+```text
+ruta/
+├── js/modulos/nombre-modulo.js     <-- Solo funciones y lógica JS
+└── vistas/nombre-modulo/
+    ├── orquestador.php             <-- Enrutador/Puente limpio
+    └── nombre_modulo_content.php   <-- Solo estructura HTML/PHP de la vista
+```

@@ -1,23 +1,18 @@
 <?php
-// ============================================================
-// CLASE_BASE.PHP — Clase base para formularios libres
-//
-// Los formularios "libres" (no CRUD automatico) extienden esta clase.
-// Proporciona acceso a $this->db (la conexion global).
-// ============================================================
+class Base {
 
-class Base
-{
     protected $db;
+    protected $dbsql;
     protected $usuario_activo;
 
-    public function __construct()
-    {
+    public function __construct() {
         $this->db = $GLOBALS['db'];
+        $this->dbsql = $GLOBALS['dbsql'];
     }
-}
 
-// Compatibilidad con formularios antiguos
-class clase_base extends Base
-{
 }
+//Para compactibilidad con formularios antiguos
+class clase_base extends Base { 
+    
+}
+?>

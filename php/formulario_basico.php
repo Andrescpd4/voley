@@ -1,124 +1,116 @@
 <?php
-// ============================================================
-// FORMULARIO_BASICO.PHP — Clase base para CRUD automatico
-//
-// Proporciona metodos listar, agregar, modificar, eliminar
-// que cualquier modulo puede extender para operaciones CRUD
-// simples sin escribir logica repetitiva.
-//
-// Seguridad:
-//   - Los IDs se validan con intval() o urldecode segun corresponda
-//   - Los formularios deben agregar validacion personalizada
-// ============================================================
+require_once("validation.php");
+class formulario_basico {
 
-require_once("php/validation.php");
-
-class formulario_basico
-{
-    protected $tabla;
-    protected $clave_primaria;
-    protected $auto_incremental;
+    protected $tabla, $clave_primaria, $secuencia, $auto_incremental;
+    protected $sql, $sql_fila, $campo_ordenar;
     protected $db;
-    protected $sql_fila;
 
-    /**
-     * Constructor
-     * @param string $tabla Nombre de la tabla en BD
-     * @param string $clave_primaria Nombre del campo PK
-     * @param boolean $auto_incremental Si el PK es autoincremental
-     */
-    public function __construct($tabla, $clave_primaria, $auto_incremental = true)
-    {
+    public function __construct($tabla, $clave_primaria, $auto_incremental = true, $campo_ordenar = "") {
         $this->tabla = $tabla;
         $this->clave_primaria = $clave_primaria;
         $this->db = $GLOBALS['db'];
+        $this->secuencia = $tabla . "_" . $clave_primaria . "_seq";
         $this->auto_incremental = $auto_incremental;
-        $this->sql_fila = '';
+        $this->campo_ordenar = $campo_ordenar;
     }
 
-    /**
-     * Validacion por defecto (se puede sobrescribir)
-     */
-    function validar()
-    {
-        return true;
+    function setSQLFila($sql) {
+        $this->sql_fila = $sql;
     }
 
-    /**
-     * Consulta SQL base para listar (se puede sobrescribir)
-     */
-    protected function getSQL()
+    function get_btn($id)
     {
-        return "SELECT * FROM " . $this->tabla . " ORDER BY " . $this->clave_primaria . " ASC";
+        $id = "'".$id."'";
+        $btn = '<ul class="nav align-items-center">
+                                    <li class="mr-4 d-sm-inline" style="cursor:pointer">
+                                        <span title="" data-toggle="tooltip" data-original-title="Editar" onclick="f.modificar('.$id.',$table)" class="accion-modificar">
+                                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="#1565c0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                        </span>
+                                    </li>
+
+                                    <li class="mr-4 d-sm-inline" style="cursor:pointer">
+                                        <span title="" data-toggle="tooltip" data-original-title="Eliminar" onclick="f.eliminar('.$id.',$table)" class="accion-eliminar">
+                                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="#dc0606" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        </span>
+                                    </li>
+
+                                    <li class="d-sm-inline " style="cursor:pointer">
+                                        <span class="accion-mostrar" title="" data-toggle="tooltip" data-original-title="Ver" onclick="f.mostrar('.$id.')">
+                                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="#00c851" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </span>
+                                    </li>
+                                </ul>';
+            return $btn;
     }
 
-    /**
-     * Obtener una fila por su PK
-     */
-    protected function fila($agregar = false)
-    {
-        $pk = $this->clave_primaria;
+    protected function getSQL() {
+        return "SELECT * FROM " . $this->tabla;
+    }
 
-        if ($this->sql_fila != '') {
-            $sql = sprintf($this->sql_fila, $id);
+    protected function fila($agregar = false) {
+        $this->sql = $this->getSQL();
+        $sql = mb_strtolower($this->sql,'UTF-8');
+        $sql_fila = explode("order", $sql)[0];
+
+
+        if ($this->sql_fila != "") {
+            $sql = $this->sql_fila;
         } else {
-            if ($agregar == true && $this->auto_incremental == true) {
-                $id = $this->db->last_insert_id();
-            } else {
-                $id = $_POST[$pk];
-            }
-            $sql = "SELECT * FROM " . $this->tabla . " WHERE " . $pk . "='" . $id . "'";
+            $sql = "SELECT * FROM ($sql_fila) AS t WHERE $this->clave_primaria='%s' ";
         }
+
+        $id = "";
+        if (($agregar == true && $this->auto_incremental == false) || $agregar == false) {
+            $id = $_POST[$this->clave_primaria];
+        } else {
+            $id = $this->db->last_insert_id($this->secuencia);
+        }
+
+        $sql = sprintf($sql, $id);
+
 
         $rw = $this->db->select_row($sql);
-        if (is_array($rw) && isset($rw['id'])) {
-            $rw['id'] = urlsafe_b64encode($rw['id']);
-        }
+        $rw['id'] = urlsafe_b64encode($rw['id']);
+        $rw['btn']=$this->get_btn($rw['id']);
         return $rw;
     }
 
-    /**
-     * Listar registros con paginacion
-     */
-    function listar()
-    {
+    function validar() {
+        //True: Indica que SI se superó la validación
+        return true;
+    }
+
+    function listar() {
         $sql = $this->getSQL();
 
-        $result = array();
         $result['total'] = $this->db->count_rows($sql);
 
-        $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-        $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 10;
+        $offset = $_GET['offset'];
+        $limit = $_GET['limit'];
 
         $rs = $this->db->select_limit($sql, $limit, $offset);
         $result['rows'] = array();
         $num = $offset + 1;
-
-        for ($i = 0; $i < count($rs); $i++) {
-            $rw = $rs[$i];
+        foreach ($rs as $key => $rw) {
             $rw['_NUM_'] = $num++;
             $rw['id'] = urlsafe_b64encode($rw['id']);
+            $rw['btn']=$this->get_btn($rw['id']);
             $result['rows'][] = $rw;
         }
-
+        //$result['rows'] = $this->db->fetch_all($rs);
         echo json_encode($result);
     }
 
-    /**
-     * Agregar nuevo registro
-     */
-    function agregar()
-    {
-        if ($this->validar() == false) {
-            exit(0);
-        }
+    function agregar() {
+        if ($this->validar() == false)
+            exit(0); //No seguir si no se supera la validación
 
-        // Quitar PK si es autoincremental
-        if ($this->auto_incremental == true) {
+        if ($this->auto_incremental == true)
             unset($_POST[$this->clave_primaria]);
-        }
 
-        $id = $this->db->insert($this->tabla, $_POST);
+        $sql = $this->db->make_insert($this->tabla, $_POST);
+        @$this->db->query($sql);
 
         $r = array();
         if ($this->db->error()) {
@@ -126,106 +118,91 @@ class formulario_basico
             $r['msg'] = $this->db->error();
             echo json_encode($r);
             die;
+        } else {
+            $r['error'] = false;
+            $r['msg'] = "Registro agregado con éxito";
+            $r['row'] = $this->fila(true);
         }
 
-        $r['error'] = false;
-        $r['msg'] = "Registro agregado con exito";
-        $r['row'] = $this->fila(true);
-
-        // Bitacora
-        $tipo = 1;
-        $nuevos = $_POST;
-        $mensaje = $r['msg'];
-        $viejos = false;
-        insertar_bitacora($tipo, $nuevos, $mensaje, $viejos);
+         //BITACORA
+         $tipo=1;
+         $nuevos=$_POST;
+         $mensaje=$r['msg'];
+         $viejos=false;
+         insertar_bitacora($tipo,$nuevos,$mensaje,$viejos);
 
         echo json_encode($r);
     }
 
-    /**
-     * Modificar registro existente
-     */
-    function modificar()
-    {
-        if ($this->validar() == false) {
-            exit(0);
-        }
+    function asignar() {
+        $pk = $this->clave_primaria;
+        $sql = "select * from $this->tabla where $pk='$_GET[id]'";
+        $rw = $this->db->select_row($sql);
+        $rw['id'] = urlsafe_b64encode($rw['id']);
+        echo json_encode($rw);
+    }
+
+    function modificar() {
+        if ($this->validar() == false)
+            exit(0); //No seguir si no se supera la validación
 
         $pk = $this->clave_primaria;
         $v_pk = $_POST[$pk];
         $update = $_POST;
         unset($update[$pk]);
 
-        // Guardar datos anteriores para bitacora
-        $viejos = $this->db->select_row("SELECT * FROM " . $this->tabla . " WHERE " . $pk . "='" . $v_pk . "'");
 
-        $this->db->update($this->tabla, $update, array($pk => $v_pk));
+        $viejos= $this->db->select_row("SELECT * from $this->tabla where $pk='$v_pk'");
+        $sql = $this->db->make_update($this->tabla, $update) . " where $pk='$v_pk'";
 
-        $r = array();
-        if ($this->db->error()) {
-            $r['error'] = true;
-            $r['msg'] = $this->db->error();
-            echo json_encode($r);
-            die;
-        }
-
-        $r['error'] = false;
-        $r['msg'] = "Registro modificado con exito";
-        $r['row'] = $this->fila(false);
-
-        // Bitacora
-        $tipo = 3;
-        $nuevos = $_POST;
-        $mensaje = $r['msg'];
-        insertar_bitacora($tipo, $nuevos, $mensaje, $viejos);
-
-        echo json_encode($r);
-    }
-
-    /**
-     * Eliminar registro
-     */
-    function eliminar()
-    {
-        $pk = $this->clave_primaria;
-        $id = $_POST[$pk];
-
-        // Guardar datos anteriores para bitacora
-        $viejos = $this->db->select_row("SELECT * FROM " . $this->tabla . " WHERE " . $pk . "='" . $id . "'");
-
-        $sql = "DELETE FROM " . $this->tabla . " WHERE " . $pk . "='" . $id . "'";
-        $this->db->query($sql);
+        @$this->db->query($sql);
 
         $r = array();
         if ($this->db->error()) {
             $r['error'] = true;
             $r['msg'] = $this->db->error();
-            echo json_encode($r);
-            die;
+        } else {
+            $r['error'] = false;
+            $r['msg'] = "Registro modificado con éxito.";
+
+            $r['row'] = $this->fila(false);
+            //$r['row']=$this->db->select_row("select * from general.persona where identifica='$_POST[identifica]'");   
         }
 
-        $r['error'] = false;
-        $r['msg'] = "Registro eliminado con exito";
-
-        // Bitacora
-        $tipo = 2;
-        $nuevos = false;
-        $mensaje = $r['msg'];
-        insertar_bitacora($tipo, $nuevos, $mensaje, $viejos);
+         //BITACORA
+         $tipo=3;
+         $nuevos=$_POST;
+         $mensaje=$r['msg'];
+         insertar_bitacora($tipo,$nuevos,$mensaje,$viejos);
 
         echo json_encode($r);
     }
 
-    /**
-     * Asignar/cargar un registro por GET id
-     */
-    function asignar()
-    {
+    function eliminar() {
         $pk = $this->clave_primaria;
-        $sql = "SELECT * FROM " . $this->tabla . " WHERE " . $pk . "='" . $_GET[$pk] . "'";
-        $rw = $this->db->select_row($sql);
-        $rw['id'] = urlsafe_b64encode($rw['id']);
-        echo json_encode($rw);
+        $sql = "delete from $this->tabla where $pk='$_POST[$pk]'";
+        #$sql = "UPDATE $this->tabla SET visible=2 where $pk='$_POST[$pk]'";
+        $viejos= $this->db->select_row("SELECT * from $this->tabla where $pk='$_POST[$pk]'");
+        $query = $this->db->query($sql);
+
+        $r = array();
+        if ($this->db->error()) {
+            $r['error'] = true;
+            $r['msg'] = $this->db->error();
+        } else {
+            $r['error'] = false;
+            $r['msg'] = "Registro eliminado con éxito.";
+        }
+
+         //BITACORA
+         $tipo=2;
+         $nuevos=false;
+         $mensaje=$r['msg'];         
+         insertar_bitacora($tipo,$nuevos,$mensaje,$viejos);
+
+        echo json_encode($r);
     }
+
 }
+
 ?>

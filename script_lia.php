@@ -9,12 +9,13 @@
    
     <script type='text/javascript' src='<?php echo WEB_ROOT ?>plantilla/assets/libs/choices.js/public/assets/scripts/choices.min.js'></script>
     
-  
-    <script src="<?php echo WEB_ROOT ?>js/heaven/toastDemo.js"></script>
-    <script src="<?php echo WEB_ROOT ?>js/heaven/desktop-notification.js"></script>
-    <script src="<?php echo WEB_ROOT ?>js/heaven.js"></script>
+<script src="<?php echo WEB_ROOT ?>js/heaven/toastDemo.js"></script>
+     <script src="<?php echo WEB_ROOT ?>js/heaven/desktop-notification.js"></script>
 
-    <script src="<?php echo WEB_ROOT ?>js/multi_select/jquery.sumoselect.js"></script>
+     <!-- Script heaven.js no existe en esta version, comentado para evitar error 404 -->
+     <!-- <script src="<?php echo WEB_ROOT ?>js/heaven.js"></script> -->
+
+     <script src="<?php echo WEB_ROOT ?>js/multi_select/jquery.sumoselect.js"></script>
     <link href="<?php echo WEB_ROOT ?>js/multi_select/sumoselect.css" rel="stylesheet" />
 
     <script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/formulario_basico_v2.js"></script>
@@ -26,12 +27,11 @@
     <script src="<?php echo WEB_ROOT ?>js/crud/bootstrap-table-export.min.js"></script>
     <script src="<?php echo WEB_ROOT ?>js/crud/bootstrap-table-mobile.min.js"></script>
 
-    <!-- Resources -->
-    <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
-    <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
-    <script src="https://cdn.amcharts.com/lib/4/themes/material.js"></script>
-    <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
-    <script src="<?php echo WEB_ROOT ?>js/graficar.js"></script>
+<!-- Resources -->
+     <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
+     <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
+     <script src="https://cdn.amcharts.com/lib/4/themes/material.js"></script>
+     <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
 
 
    
