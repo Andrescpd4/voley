@@ -155,3 +155,16 @@ Asistencia.
 Eventos y permisos.
 Comunicados.
 Panel administrativo.
+
+----------------------ABSTRACCION------------------
+Agruparemos tus 12 requerimientos en 5 Macro-Módulos para facilitar el desarrollo modular y evitar el alto acoplamiento:
+
+Módulo Core (Base y Seguridad): Gestión de Usuarios, Roles (Admin, Entrenador, Acudiente), Perfiles, y Aislamiento de Datos (SGSI para menores de edad). Reutilizaremos casi al 100% tu motor actual de roles y permisos.
+
+Módulo de Admisiones (El Onboarding): Formulario de afiliación (guardado parcial), carga paramétrica de documentos obligatorios, cálculo de estado general (ej. 75%) y flujo de revisión administrativa (Borrador -> Pendiente -> Aprobado).
+
+Módulo Legal & Compliance: Motor paramétrico de autorizaciones (Tratamiento de datos, Imagen, etc.), firmas digitales/electrónicas, versionamiento de documentos legales y trazabilidad de auditoría.
+
+Módulo Operativo (Cancha): Ficha 360° del deportista, control de asistencia, creación de eventos/torneos y gestión de permisos de salida (con firma digital del acudiente).
+
+Módulo de Comunicaciones & Control: Dashboard administrativo, comunicados segmentados, acuses de recibo y notificaciones push/email.

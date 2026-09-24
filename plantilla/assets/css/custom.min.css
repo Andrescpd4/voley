@@ -1,2 +1,163 @@
+/* ============================================================
+   VOLEY+ — Tema rosa/magenta femenino
+   Sidebar oscuro con acentos rosa + contenido CLARO
+   Paleta basada en logo: fbadd9, d50156, 011121, fcfcfc
+   ============================================================ */
 
-/*# sourceMappingURL=custom.min.css.map */
+/* ---- Color primario global (botones, links, acentos) ---- */
+[data-theme="default"][data-theme-colors="voley"] {
+  --vz-primary: #c2458b;
+  --vz-primary-rgb: 194, 69, 139;
+  --vz-primary-bg-subtle: rgba(194, 69, 139, 0.10);
+  --vz-primary-border-subtle: rgba(194, 69, 139, 0.25);
+  --vz-primary-text-emphasis: #8f2f66;
+}
+
+/* ---- Body CLARO ---- */
+[data-theme="default"][data-bs-theme="light"] {
+  --vz-body-bg: #f8f6fa;
+  --vz-body-color: #3d3448;
+  --vz-body-color-rgb: 61, 52, 72;
+}
+
+/* ---- Sidebar OSCURO con acentos rosa ---- */
+[data-theme="default"][data-sidebar="dark"] {
+  --vz-vertical-menu-bg: #1e1328;
+  --vz-vertical-menu-item-color: #c9b8d6;
+  --vz-vertical-menu-item-hover-color: #f062a6;
+  --vz-vertical-menu-item-active-color: #fbadd9;
+  --vz-vertical-menu-item-font-size: 0.95rem;
+  --vz-sidebar-user-bg: rgba(255, 255, 255, 0.06);
+  --vz-sidebar-user-name-text: #f0e6f5;
+  --vz-sidebar-user-name-sub-text: #b5a3c4;
+}
+
+/* ---- Topbar clara ---- */
+[data-theme="default"][data-topbar="light"] {
+  --vz-header-bg: #ffffff;
+  --vz-header-item-bg: #f0e6f5;
+  --vz-topbar-search-bg: #f0e6f5;
+  --vz-topbar-search-color: #3d3448;
+}
+
+/* ---- Hover de items del menu lateral ---- */
+.navbar-menu .navbar-nav .nav-link:hover {
+  background-color: rgba(194, 69, 139, 0.08) !important;
+}
+
+/* ---- Item activo del menu lateral ---- */
+.navbar-menu .navbar-nav .nav-link.active {
+  background-color: rgba(194, 69, 139, 0.12) !important;
+}
+
+/* ---- Submenu items ---- */
+.navbar-menu .navbar-nav .nav-sm .nav-link {
+  color: #b5a3c4 !important;
+  font-size: 0.875rem !important;
+}
+.navbar-menu .navbar-nav .nav-sm .nav-link:hover {
+  color: #f062a6 !important;
+}
+.navbar-menu .navbar-nav .nav-sm .nav-link.active {
+  color: #fbadd9 !important;
+}
+
+/* ---- Cards ---- */
+.card {
+  background-color: #ffffff !important;
+  border-color: rgba(194, 69, 139, 0.12) !important;
+}
+.card-header {
+  background-color: rgba(194, 69, 139, 0.04) !important;
+  border-bottom-color: rgba(194, 69, 139, 0.10) !important;
+}
+
+/* ---- Tablas ---- */
+.table {
+  --vz-table-color: #3d3448;
+  --vz-table-bg: transparent;
+  --vz-table-hover-bg: rgba(194, 69, 139, 0.04);
+  --vz-table-border-color: rgba(194, 69, 139, 0.10);
+}
+
+/* ---- Inputs y formularios ---- */
+.form-control,
+.form-select {
+  background-color: #ffffff !important;
+  border-color: rgba(194, 69, 139, 0.20) !important;
+  color: #3d3448 !important;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: #c2458b !important;
+  box-shadow: 0 0 0 0.2rem rgba(194, 69, 139, 0.12) !important;
+}
+.form-label {
+  color: #5a4d65 !important;
+}
+
+/* ---- Botones primary ---- */
+.btn-primary {
+  background-color: #c2458b !important;
+  border-color: #c2458b !important;
+  color: #ffffff !important;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #a8377a !important;
+  border-color: #a8377a !important;
+}
+.btn-outline-primary {
+  border-color: #c2458b !important;
+  color: #c2458b !important;
+}
+.btn-outline-primary:hover {
+  background-color: #c2458b !important;
+  color: #ffffff !important;
+}
+
+/* ---- SweetAlert override ---- */
+.swal2-popup {
+  background-color: #ffffff !important;
+  color: #3d3448 !important;
+}
+.swal2-title {
+  color: #c2458b !important;
+}
+.swal2-confirm {
+  background-color: #c2458b !important;
+}
+
+/* ---- Page title ---- */
+.page-title-box h4 {
+  color: #2d2235 !important;
+}
+
+/* ---- Breadcrumbs ---- */
+.breadcrumb-item a {
+  color: #c2458b !important;
+}
+.breadcrumb-item.active {
+  color: #7a6d82 !important;
+}
+
+/* ---- Badge primary ---- */
+.badge.bg-primary {
+  background-color: #c2458b !important;
+}
+
+/* ---- Links ---- */
+a {
+  color: #c2458b;
+}
+a:hover {
+  color: #a8377a;
+}
+
+/* ---- DataTables overrides ---- */
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: #c2458b !important;
+  color: #ffffff !important;
+  border-color: #c2458b !important;
+}
