@@ -1,0 +1,67 @@
+[23-Sep-2026 07:48:23 America/Bogota] PHP Fatal error:  Uncaught Error: Call to undefined method TemaDiseno::obtener() in C:\xampp\htdocs\voley\modulos\diseno\acciones.php:264
+Stack trace:
+#0 C:\xampp\htdocs\voley\descarga.php(53): require_once()
+#1 C:\xampp\htdocs\voley\index.php(55): require_once('C:\\xampp\\htdocs...')
+#2 {main}
+  thrown in C:\xampp\htdocs\voley\modulos\diseno\acciones.php on line 264
+
+[23-Sep-2026 10:05:23 America/Bogota] PHP Fatal error:  Uncaught Error: Call to undefined method TemaDiseno::obtener() in C:\xampp\htdocs\voley\modulos\diseno\acciones.php:264
+Stack trace:
+#0 C:\xampp\htdocs\voley\descarga.php(53): require_once()
+#1 C:\xampp\htdocs\voley\index.php(55): require_once('C:\\xampp\\htdocs...')
+#2 {main}
+  thrown in C:\xampp\htdocs\voley\modulos\diseno\acciones.php on line 264
+[23-Sep-2026 10:07:25 America/Bogota] PHP Fatal error:  Uncaught Error: Call to undefined method TemaDiseno::obtener() in C:\xampp\htdocs\voley\modulos\diseno\acciones.php:264
+Stack trace:
+#0 C:\xampp\htdocs\voley\descarga.php(53): require_once()
+#1 C:\xampp\htdocs\voley\index.php(55): require_once('C:\\xampp\\htdocs...')
+#2 {main}
+  thrown in C:\xampp\htdocs\voley\modulos\diseno\acciones.php on line 264
+[23-Sep-2026 14:45:32 America/Bogota] PHP Fatal error:  Uncaught Error: Call to undefined method TemaDiseno::obtener() in C:\xampp\htdocs\voley\modulos\diseno\acciones.php:264
+Stack trace:
+#0 C:\xampp\htdocs\voley\descarga.php(53): require_once()
+#1 C:\xampp\htdocs\voley\index.php(55): require_once('C:\\xampp\\htdocs...')
+#2 {main}
+  thrown in C:\xampp\htdocs\voley\modulos\diseno\acciones.php on line 264
+[23-Sep-2026 16:12:11 America/Bogota] SQLSTATE[42S02]: Base table or view not found: 1146 Table 'voley_plus.v_afiliacion' doesn't exist (Connection: default, SQL: SELECT a.id,
+                       CONCAT_WS(' ', p1.nombre1, p1.nombre2, p1.apellido1, p1.apellido2) AS acudiente_nombre,
+                       CONCAT_WS(' ', p2.nombre1, p2.nombre2, p2.apellido1, p2.apellido2) AS deportista_nombre,
+                       a.estado,
+                       a.porcentaje_completado,
+                       a.fecha_solicitud,
+                       a.fecha_aprobacion
+                FROM v_afiliacion a
+                INNER JOIN v_acudiente ac ON a.acudiente_id = ac.id
+                INNER JOIN persona p1 ON ac.persona_id = p1.id
+                INNER JOIN v_deportista d ON a.deportista_id = d.id
+                INNER JOIN persona p2 ON d.persona_id = p2.id
+                WHERE 1=1 ORDER BY a.fecha_solicitud DESC)
+[23-Sep-2026 16:12:11 America/Bogota] SQLSTATE[42S02]: Base table or view not found: 1146 Table 'voley_plus.v_afiliacion' doesn't exist (Connection: default, SQL: SELECT a.id,
+                       CONCAT_WS(' ', p1.nombre1, p1.nombre2, p1.apellido1, p1.apellido2) AS acudiente_nombre,
+                       CONCAT_WS(' ', p2.nombre1, p2.nombre2, p2.apellido1, p2.apellido2) AS deportista_nombre,
+                       a.estado,
+                       a.porcentaje_completado,
+                       a.fecha_solicitud,
+                       a.fecha_aprobacion
+                FROM v_afiliacion a
+                INNER JOIN v_acudiente ac ON a.acudiente_id = ac.id
+                INNER JOIN persona p1 ON ac.persona_id = p1.id
+                INNER JOIN v_deportista d ON a.deportista_id = d.id
+                INNER JOIN persona p2 ON d.persona_id = p2.id
+                WHERE 1=1 ORDER BY a.fecha_solicitud DESC LIMIT 50 OFFSET 0)
+[23-Sep-2026 16:15:36 America/Bogota] SQLSTATE[42S02]: Base table or view not found: 1146 Table 'voley_plus.v_acudiente' doesn't exist (Connection: default, SQL: SELECT ac.id, CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2, ' [', p.identificacion, ']') AS nombre
+                FROM v_acudiente ac
+                INNER JOIN persona p ON ac.persona_id = p.id
+                WHERE ac.activo = 1
+                ORDER BY p.nombre1, p.apellido1)
+[23-Sep-2026 16:15:36 America/Bogota] SQLSTATE[42S02]: Base table or view not found: 1146 Table 'voley_plus.v_deportista' doesn't exist (Connection: default, SQL: SELECT d.id, CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2, ' [', p.identificacion, ']') AS nombre
+                FROM v_deportista d
+                INNER JOIN persona p ON d.persona_id = p.id
+                WHERE d.estado = 'activo'
+                ORDER BY p.nombre1, p.apellido1)
+[23-Sep-2026 16:43:14 America/Bogota] PHP Fatal error:  Uncaught Error: Call to undefined method TemaDiseno::obtener() in C:\xampp\htdocs\voley\modulos\diseno\acciones.php:264
+Stack trace:
+#0 C:\xampp\htdocs\voley\descarga.php(53): require_once()
+#1 C:\xampp\htdocs\voley\index.php(55): require_once('C:\\xampp\\htdocs...')
+#2 {main}
+  thrown in C:\xampp\htdocs\voley\modulos\diseno\acciones.php on line 264

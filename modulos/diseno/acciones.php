@@ -27,7 +27,7 @@ class TemaDiseno extends formulario_basico
         $v->addRules('fuente_base', 'Fuente Base', array('maxLength' => 50));
         $v->addRules('fuente_titulo', 'Fuente Título', array('maxLength' => 50));
         // Tamaño base: número entre 0.5 y 3
-        $v->addRules('tamaño_base', 'Tamaño Base', array('required' => true, 'min' => 0.5, 'max' => 3, 'decimal' => true));
+        $v->addRules('tamano_base', 'Tamaño Base', array('required' => true, 'min' => 0.5, 'max' => 3, 'decimal' => true));
         // Escala de espaciado: número entre 0.5 y 2
         $v->addRules('escala_espaciado', 'Escala de Espaciado', array('required' => true, 'min' => 0.5, 'max' => 2, 'decimal' => true));
         // Dark mode: 0 o 1
@@ -48,7 +48,7 @@ class TemaDiseno extends formulario_basico
         }
     }
 
-    function listar()
+    function obtener()
     {
         // Obtener el tema activo (asumimos solo uno)
         $sql = "SELECT * FROM diseno_tema WHERE activo = 1 ORDER BY id DESC LIMIT 1";
@@ -102,7 +102,7 @@ class TemaDiseno extends formulario_basico
         }
         $datos['fuente_base'] = $_POST['fuente_base'] ?? '';
         $datos['fuente_titulo'] = $_POST['fuente_titulo'] ?? '';
-        $datos['tamaño_base'] = $_POST['tamaño_base'] ?? 1;
+        $datos['tamano_base'] = $_POST['tamano_base'] ?? 1;
         $datos['escala_espaciado'] = $_POST['escala_espaciado'] ?? 1;
         $datos['dark_mode'] = $_POST['dark_mode'] ?? 0;
         $datos['fecha_actualiz'] = date('Y-m-d H:i:s');
@@ -158,7 +158,7 @@ class TemaDiseno extends formulario_basico
         $defecto['gris900'] = '#212529';
         $defecto['fuente_base'] = 'System UI,Helvetica Neue,Arial,sans-serif';
         $defecto['fuente_titulo'] = 'System UI,Helvetica Neue,Arial,sans-serif';
-        $defecto['tamaño_base'] = 1;
+        $defecto['tamano_base'] = 1;
         $defecto['escala_espaciado'] = 1;
         $defecto['dark_mode'] = 0;
         $defecto['fecha_actualiz'] = date('Y-m-d H:i:s');
@@ -222,7 +222,7 @@ class TemaDiseno extends formulario_basico
             $css .= "  --bs-font-serif: \"" . $rw['fuente_titulo'] . "\";\n"; // Los títulos a menudo usan serif, pero podemos usarlo para heading
             // También podemos definir una variable para heading si el tema la usa.
         }
-        $css .= "  --bs-font-base-size: " . ($rw['tamaño_base'] ?? 1) . "rem;\n";
+        $css .= "  --bs-font-base-size: " . ($rw['tamano_base'] ?? 1) . "rem;\n";
         $css .= "  --bs-spacing-unit: " . ($rw['escala_espaciado'] ?? 1) . "rem;\n";
         // Modo oscuro: si está activado, podemos agregar una clase .dark en el body y definir variables alternativas.
         // Pero aquí solo dejamos las variables principales; el modo oscuro se puede manejar mediante una clase en body que sobrescriba.

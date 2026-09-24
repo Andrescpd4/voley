@@ -6,14 +6,7 @@ define("MODULO", "diseno");
 
 // Incluir CSS y JS compartidos ANTES de los tabs
 ?>
-<link rel="stylesheet" href="<?php echo WEB_ROOT ?>plantilla/assets/css/app.min.css" type="text/css"/>
-<link rel="stylesheet" href="<?php echo WEB_ROOT ?>plantilla/assets/css/custom.min.css" type="text/css"/>
-<!-- Si usamos variables CSS, no necesitamos más CSS aquí, pero dejamos los del tema por si hacen falta -->
 <style id="dynamic-theme"></style>
-
-<script type="text/javascript" src="<?php echo WEB_ROOT ?>js/jquery_3.4.1_jquery.min.js"></script>
-<script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/general.js"></script>
-<script type="text/javascript" src="<?php echo WEB_ROOT ?>js/heaven/jquery.extra.js"></script>
 
 <script type="text/javascript">
 // Funciones compartidas (hoisted)
@@ -88,7 +81,7 @@ function gcObtenerYAplicarTema() {
             if (r.data.fuente_titulo) {
                 css += '--bs-font-serif: "' + r.data.fuente_titulo + '";';
             }
-            css += '--bs-font-base-size: ' + (r.data.tamaño_base || 1) + 'rem;';
+            css += '--bs-font-base-size: ' + (r.data.tamano_base || 1) + 'rem;';
             css += '--bs-spacing-unit: ' + (r.data.escala_espaciado || 1) + 'rem;';
             css += '}';
             // Modo oscuro: si está activado, agregar clase al html
@@ -130,8 +123,8 @@ function gcRellenarFormulario(data) {
         document.getElementById('fuente_titulo').value = data.fuente_titulo;
     }
     // Tamaño base
-    if (data.tamaño_base !== null && data.tamaño_base !== '') {
-        document.getElementById('tamaño_base').value = data.tamaño_base;
+    if (data.tamano_base !== null && data.tamano_base !== '') {
+        document.getElementById('tamano_base').value = data.tamano_base;
     }
     // Escala de espaciado
     if (data.escala_espaciado !== null && data.escala_espaciado !== '') {
@@ -186,6 +179,11 @@ jQuery(document).ready(function($) {
 // Función para guardar tema desde los tabs
 function gcGuardarTema(datos, callback) {
     gcAjax('guardar', datos, function(r) {
+        if (r.error === false) {
+            alert('Tema guardado con éxito');
+        } else {
+            alert('Error: ' + r.msg);
+        }
         if (callback) callback(r);
     });
 }

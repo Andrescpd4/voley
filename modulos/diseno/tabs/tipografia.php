@@ -15,8 +15,8 @@
     <div class="col-md-6">
         <h5 class="card-title">Tamaño y Espaciado de Texto</h5>
         <div class="mb-3">
-            <label for="tamaño_base" class="form-label">Tamaño Base (rem)</label>
-            <input type="number" class="form-control" id="tamaño_base" name="tamaño_base" step="0.01" min="0.5" max="3" value="1">
+            <label for="tamano_base" class="form-label">Tamaño Base (rem)</label>
+            <input type="number" class="form-control" id="tamano_base" name="tamano_base" step="0.01" min="0.5" max="3" value="1">
             <div class="form-text">Define el tamaño base del texto (1rem = 16px por defecto).</div>
         </div>
         <div class="mb-3">
@@ -47,7 +47,7 @@
             document.documentElement.style.removeProperty('--bs-font-serif');
         }
     });
-    document.getElementById('tamaño_base').addEventListener('input', function() {
+    document.getElementById('tamano_base').addEventListener('input', function() {
         var valor = this.value;
         document.documentElement.style.setProperty('--bs-font-base-size', valor + 'rem');
     });

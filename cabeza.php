@@ -129,7 +129,7 @@
                             <div class="dropdown-menu dropdown-menu-end">
                                 <h6 class="dropdown-header">Hola! <?php echo $_SESSION['nombre_usuario'] ?? 'Usuario' ?></h6>
                                 <a class="dropdown-item" href="<?php echo WEB_ROOT ?>perfil"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Perfil</span></a>
-                                <a class="dropdown-item" href="<?php echo WEB_ROOT ?>sesion/cerrar_sesion"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Salir</span></a>
+                                <a class="dropdown-item" href="<?php echo WEB_ROOT ?>cerrar-sesion"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Salir</span></a>
                             </div>
                         </div>
                     </div>

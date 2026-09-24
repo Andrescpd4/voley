@@ -1,0 +1,1 @@
+[23-Sep-2026 17:01:43 America/Bogota] SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'LIMIT 1 OFFSET 0' at line 1 (Connection: default, SQL: SELECT * FROM diseno_tema WHERE activo = 1 ORDER BY id DESC LIMIT 1 LIMIT 1 OFFSET 0)
