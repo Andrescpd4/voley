@@ -26,8 +26,8 @@ if ($persona_id_sesion > 0) {
             <!-- SECCION 1: DATOS DEL DEPORTISTA                              -->
             <!-- ============================================================ -->
             <div class="card mb-3 border">
-                <div class="card-header" style="background: #405189; color: white;">
-                    <h6 class="card-title mb-0 text-white">
+                <div class="card-header" style="background: #1e1328; color: white;">
+                    <h6 class="card-title mb-0 text-black">
                         <i class="ri-user-smile-line me-1"></i> 1. Datos Personales del Deportista (Niño / Niña)
                     </h6>
                 </div>

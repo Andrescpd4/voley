@@ -72,7 +72,7 @@ if (!$es_admin) {
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle mb-0" id="tablaGestionAfiliaciones" style="width: 100%;">
                         <thead>
-                            <tr style="background: #405189; color: white;">
+                            <tr style="background: #1e1328; color: white;">
                                 <th style="width: 40px; color: white;">#</th>
                                 <th style="color: white;">Deportista</th>
                                 <th style="color: white;">Doc. Deportista</th>
@@ -224,7 +224,7 @@ jQuery(document).ready(function($) {
                 }
             }
         ],
-        language: { url: "js/datatable/spanish.json" },
+        language: { url: web_root + "js/datatable/spanish.json" },
         pageLength: 50,
         serverSide: true,
         processing: true,
