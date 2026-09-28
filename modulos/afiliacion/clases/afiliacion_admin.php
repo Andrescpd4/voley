@@ -146,7 +146,10 @@ trait afiliacion_admin
             return;
         }
 
-        if (isset($_GET['id'])) {
+        // 0. Leer ID desde POST (frontend afiliacionAjax) con fallback a GET
+        if (isset($_POST['id'])) {
+            $id = intval($_POST['id']);
+        } else if (isset($_GET['id'])) {
             $id = intval($_GET['id']);
         } else {
             $id = 0;

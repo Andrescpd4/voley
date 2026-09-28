@@ -12,8 +12,8 @@ trait afiliacion_acudiente
     {
         $this->validar_token_simple();
 
-        // Verificar que sea acudiente
-        if (!$this->_es_acudiente()) {
+        // Verificar que sea acudiente o admin (super admin prueba como desarrollador)
+        if (!$this->_es_acudiente() && !$this->_es_admin()) {
             $this->_error('No tiene permisos para registrar deportistas');
             return;
         }
@@ -22,6 +22,20 @@ trait afiliacion_acudiente
         if ($persona_id_acudiente <= 0) {
             $this->_error('No se pudo identificar al acudiente en sesion');
             return;
+        }
+
+        // Si es admin y envia acudiente_id_override, registrar a nombre de ese acudiente
+        if ($this->_es_admin() && isset($_POST['acudiente_id_override'])) {
+            $override_id = intval($_POST['acudiente_id_override']);
+            if ($override_id > 0) {
+                $existe_acu = $this->_obtener_valor(
+                    "SELECT COUNT(*) FROM persona WHERE id = ?",
+                    array($override_id)
+                );
+                if (intval($existe_acu) > 0) {
+                    $persona_id_acudiente = $override_id;
+                }
+            }
         }
 
         // 2. Determinar si es borrador o envio a revision
@@ -193,7 +207,7 @@ trait afiliacion_acudiente
     {
         $this->validar_token_simple();
 
-        if (!$this->_es_acudiente()) {
+        if (!$this->_es_acudiente() && !$this->_es_admin()) {
             $this->_error('No tiene permisos');
             return;
         }
@@ -215,13 +229,22 @@ trait afiliacion_acudiente
             return;
         }
 
-        // 2. Verificar que el deportista pertenezca a este acudiente
-        $vinculo = $this->_obtener_fila(
-            "SELECT da.id, d.estado FROM deportista_acudiente da
-             INNER JOIN deportista d ON d.id = da.deportista_id
-             WHERE da.deportista_id = ? AND da.acudiente_id = ?",
-            array($deportista_id, $persona_id_acudiente)
-        );
+        // 2. Verificar vinculo (el admin omite esta verificacion: acceso total)
+        if ($this->_es_admin()) {
+            $vinculo = $this->_obtener_fila(
+                "SELECT da.id, d.estado FROM deportista_acudiente da
+                 INNER JOIN deportista d ON d.id = da.deportista_id
+                 WHERE da.deportista_id = ?",
+                array($deportista_id)
+            );
+        } else {
+            $vinculo = $this->_obtener_fila(
+                "SELECT da.id, d.estado FROM deportista_acudiente da
+                 INNER JOIN deportista d ON d.id = da.deportista_id
+                 WHERE da.deportista_id = ? AND da.acudiente_id = ?",
+                array($deportista_id, $persona_id_acudiente)
+            );
+        }
         if (empty($vinculo)) {
             $this->_error('No tiene acceso a este deportista');
             return;
@@ -332,12 +355,19 @@ trait afiliacion_acudiente
         }
         $this->_actualizar('deportista', $datos_deportista, array('id' => $deportista_id));
 
-        // 12. Actualizar parentesco si cambio
+        // 12. Actualizar parentesco si cambio (admin actualiza por deportista, acudiente por vinculo propio)
         if ($parentesco !== '') {
-            $this->_ejecutar(
-                "UPDATE deportista_acudiente SET parentesco = ? WHERE deportista_id = ? AND acudiente_id = ?",
-                array($parentesco, $deportista_id, $persona_id_acudiente)
-            );
+            if ($this->_es_admin()) {
+                $this->_ejecutar(
+                    "UPDATE deportista_acudiente SET parentesco = ? WHERE deportista_id = ?",
+                    array($parentesco, $deportista_id)
+                );
+            } else {
+                $this->_ejecutar(
+                    "UPDATE deportista_acudiente SET parentesco = ? WHERE deportista_id = ? AND acudiente_id = ?",
+                    array($parentesco, $deportista_id, $persona_id_acudiente)
+                );
+            }
         }
 
         // 13. Actualizar usuario si cambio documento
@@ -371,7 +401,7 @@ trait afiliacion_acudiente
     {
         $this->validar_token_simple();
 
-        if (!$this->_es_acudiente()) {
+        if (!$this->_es_acudiente() && !$this->_es_admin()) {
             $this->_error('No tiene permisos');
             return;
         }
@@ -395,11 +425,18 @@ trait afiliacion_acudiente
             return;
         }
 
-        // 2. Verificar vinculo acudiente-deportista
-        $vinculo = $this->_obtener_fila(
-            "SELECT id FROM deportista_acudiente WHERE deportista_id = ? AND acudiente_id = ?",
-            array($deportista_id, $persona_id_acudiente)
-        );
+        // 2. Verificar vinculo acudiente-deportista (el admin omite esta verificacion)
+        if ($this->_es_admin()) {
+            $vinculo = $this->_obtener_fila(
+                "SELECT id FROM deportista_acudiente WHERE deportista_id = ?",
+                array($deportista_id)
+            );
+        } else {
+            $vinculo = $this->_obtener_fila(
+                "SELECT id FROM deportista_acudiente WHERE deportista_id = ? AND acudiente_id = ?",
+                array($deportista_id, $persona_id_acudiente)
+            );
+        }
         if (empty($vinculo)) {
             $this->_error('No tiene acceso a este deportista');
             return;
@@ -482,7 +519,7 @@ trait afiliacion_acudiente
     {
         $this->validar_token();
 
-        if (!$this->_es_acudiente()) {
+        if (!$this->_es_acudiente() && !$this->_es_admin()) {
             $this->_error('No tiene permisos');
             return;
         }
@@ -500,14 +537,23 @@ trait afiliacion_acudiente
             return;
         }
 
-        // 1. Verificar que el documento pertenezca a un deportista del acudiente
-        $doc = $this->_obtener_fila(
-            "SELECT doc.id, doc.archivo, doc.deportista_id
-             FROM documento doc
-             INNER JOIN deportista_acudiente da ON da.deportista_id = doc.deportista_id
-             WHERE doc.id = ? AND da.acudiente_id = ?",
-            array($documento_id, $persona_id_acudiente)
-        );
+        // 1. Verificar documento (el admin omite el filtro por acudiente)
+        if ($this->_es_admin()) {
+            $doc = $this->_obtener_fila(
+                "SELECT doc.id, doc.archivo, doc.deportista_id
+                 FROM documento doc
+                 WHERE doc.id = ?",
+                array($documento_id)
+            );
+        } else {
+            $doc = $this->_obtener_fila(
+                "SELECT doc.id, doc.archivo, doc.deportista_id
+                 FROM documento doc
+                 INNER JOIN deportista_acudiente da ON da.deportista_id = doc.deportista_id
+                 WHERE doc.id = ? AND da.acudiente_id = ?",
+                array($documento_id, $persona_id_acudiente)
+            );
+        }
         if (empty($doc)) {
             $this->_error('Documento no encontrado o no tiene acceso');
             return;
@@ -542,38 +588,60 @@ trait afiliacion_acudiente
     {
         $this->validar_token();
 
-        if (!$this->_es_acudiente()) {
+        if (!$this->_es_acudiente() && !$this->_es_admin()) {
             $this->_error('No tiene permisos');
             return;
         }
 
-        $persona_id_acudiente = $this->_obtener_persona_id();
-        if ($persona_id_acudiente <= 0) {
-            $this->_error('No se pudo identificar al acudiente');
-            return;
+        // 1. Consultar solicitudes (el admin ve las ultimas 100 globales, el acudiente solo las suyas)
+        if ($this->_es_admin()) {
+            $sql = "SELECT d.id AS deportista_id,
+                           CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2) AS deportista_nombre,
+                           d.estado,
+                           CASE
+                               WHEN d.estado = 'aprobado' THEN 100
+                               WHEN d.estado = 'activo' THEN 100
+                               WHEN d.estado = 'pendiente_revision' THEN 50
+                               WHEN d.estado = 'requiere_info' THEN 25
+                               ELSE 0
+                           END AS porcentaje_completado,
+                           d.fecha_afiliacion AS fecha_solicitud,
+                           d.observaciones,
+                           d.created_at
+                    FROM deportista d
+                    INNER JOIN persona p ON d.persona_id = p.id
+                    INNER JOIN deportista_acudiente da ON da.deportista_id = d.id
+                    ORDER BY d.created_at DESC
+                    LIMIT 100";
+            $solicitudes = $this->_consultar($sql, array());
+        } else {
+            $persona_id_acudiente = $this->_obtener_persona_id();
+            if ($persona_id_acudiente <= 0) {
+                $this->_error('No se pudo identificar al acudiente');
+                return;
+            }
+
+            $sql = "SELECT d.id AS deportista_id,
+                           CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2) AS deportista_nombre,
+                           d.estado,
+                           CASE
+                               WHEN d.estado = 'aprobado' THEN 100
+                               WHEN d.estado = 'activo' THEN 100
+                               WHEN d.estado = 'pendiente_revision' THEN 50
+                               WHEN d.estado = 'requiere_info' THEN 25
+                               ELSE 0
+                           END AS porcentaje_completado,
+                           d.fecha_afiliacion AS fecha_solicitud,
+                           d.observaciones,
+                           d.created_at
+                    FROM deportista d
+                    INNER JOIN persona p ON d.persona_id = p.id
+                    INNER JOIN deportista_acudiente da ON da.deportista_id = d.id
+                    WHERE da.acudiente_id = ?
+                    ORDER BY d.created_at DESC";
+
+            $solicitudes = $this->_consultar($sql, array($persona_id_acudiente));
         }
-
-        // 1. Consultar solicitudes del acudiente
-        $sql = "SELECT d.id AS deportista_id,
-                       CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2) AS deportista_nombre,
-                       d.estado,
-                       CASE
-                           WHEN d.estado = 'aprobado' THEN 100
-                           WHEN d.estado = 'activo' THEN 100
-                           WHEN d.estado = 'pendiente_revision' THEN 50
-                           WHEN d.estado = 'requiere_info' THEN 25
-                           ELSE 0
-                       END AS porcentaje_completado,
-                       d.fecha_afiliacion AS fecha_solicitud,
-                       d.observaciones,
-                       d.created_at
-                FROM deportista d
-                INNER JOIN persona p ON d.persona_id = p.id
-                INNER JOIN deportista_acudiente da ON da.deportista_id = d.id
-                WHERE da.acudiente_id = ?
-                ORDER BY d.created_at DESC";
-
-        $solicitudes = $this->_consultar($sql, array($persona_id_acudiente));
 
         // 2. Formatear respuesta
         $filas = array();
@@ -595,7 +663,7 @@ trait afiliacion_acudiente
     {
         $this->validar_token();
 
-        if (!$this->_es_acudiente()) {
+        if (!$this->_es_acudiente() && !$this->_es_admin()) {
             $this->_error('No tiene permisos');
             return;
         }
@@ -613,13 +681,26 @@ trait afiliacion_acudiente
             return;
         }
 
-        // 1. Verificar vinculo
-        $vinculo = $this->_obtener_fila(
-            "SELECT da.id, da.parentesco, da.es_principal
-             FROM deportista_acudiente da
-             WHERE da.deportista_id = ? AND da.acudiente_id = ?",
-            array($deportista_id, $persona_id_acudiente)
-        );
+        // 1. Verificar vinculo (el admin omite esta verificacion)
+        if ($this->_es_admin()) {
+            $vinculo = $this->_obtener_fila(
+                "SELECT da.id, da.parentesco, da.es_principal, da.acudiente_id
+                 FROM deportista_acudiente da
+                 WHERE da.deportista_id = ?
+                 ORDER BY da.id ASC",
+                array($deportista_id)
+            );
+            if (!empty($vinculo)) {
+                $persona_id_acudiente = intval($vinculo['acudiente_id']);
+            }
+        } else {
+            $vinculo = $this->_obtener_fila(
+                "SELECT da.id, da.parentesco, da.es_principal
+                 FROM deportista_acudiente da
+                 WHERE da.deportista_id = ? AND da.acudiente_id = ?",
+                array($deportista_id, $persona_id_acudiente)
+            );
+        }
         if (empty($vinculo)) {
             $this->_error('No tiene acceso a este deportista');
             return;

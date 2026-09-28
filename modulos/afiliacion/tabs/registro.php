@@ -22,6 +22,23 @@ if ($persona_id_sesion > 0) {
             <input type="hidden" id="reg_deportista_id" name="deportista_id" value="0">
             <input type="hidden" id="reg_modo_guardado" name="modo_guardado" value="borrador">
 
+            <?php if ($es_admin): ?>
+            <!-- BLOQUE SOLO ADMIN: registrar a nombre de otro acudiente (pruebas y soporte) -->
+            <div class="alert alert-warning d-flex flex-column gap-2 mb-3" role="alert">
+                <div>
+                    <i class="ri-shield-user-line me-1"></i>
+                    <strong>Modo administrador:</strong> por defecto el registro queda a tu propia persona (para pruebas).
+                    Si quieres registrar a nombre de un acudiente real, seleccionalo aqui.
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium mb-1">Registrar a nombre de</label>
+                    <select class="form-select" id="reg_acudiente_override" name="acudiente_id_override">
+                        <option value="0">Mi propia persona (prueba rapida)</option>
+                    </select>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- ============================================================ -->
             <!-- SECCION 1: DATOS DEL DEPORTISTA                              -->
             <!-- ============================================================ -->
@@ -321,7 +338,33 @@ jQuery(document).ready(function($) {
 
     // 2. Cargar categorias en el select
     afiliacionCargarCategoriasSelect();
+
+    // 3. Si es admin, cargar acudientes para el select de pruebas (ver PHP $es_admin)
+    var selectOverride = document.getElementById('reg_acudiente_override');
+    if (selectOverride) {
+        afiliacionCargarAcudientesOverride();
+    }
 });
+
+// Cargar acudientes para el select solo-admin
+function afiliacionCargarAcudientesOverride() {
+    afiliacionAjax('listar_acudientes_admin', {}, function(respuesta) {
+        if (!respuesta.error && respuesta.data) {
+            var select = document.getElementById('reg_acudiente_override');
+            if (!select) {
+                return;
+            }
+            var lista = respuesta.data;
+            for (var i = 0; i < lista.length; i++) {
+                var item = lista[i];
+                var opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.nombre;
+                select.appendChild(opt);
+            }
+        }
+    });
+}
 
 // Cargar categorias activas desde el backend
 function afiliacionCargarCategoriasSelect() {

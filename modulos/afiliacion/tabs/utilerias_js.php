@@ -18,24 +18,35 @@ function afiliacionAjax(accion, datos, callback) {
         if (xhr.status === 200) {
             try {
                 var respuesta = JSON.parse(xhr.responseText);
+                // Mostrar el mensaje pero SIEMPRE avisar al llamador para no dejar botones bloqueados
                 if (respuesta.error) {
                     afiliacionMostrarMsg(respuesta.msg, 'error');
-                } else if (callback) {
+                }
+                if (callback) {
                     callback(respuesta);
                 }
             } catch(e) {
                 console.error('Error parseando JSON:', e, xhr.responseText);
                 afiliacionMostrarMsg('Error al procesar la respuesta del servidor', 'error');
+                if (callback) {
+                    callback({ error: true, msg: 'Error al procesar la respuesta del servidor' });
+                }
             }
         } else {
             console.error('Error HTTP:', xhr.status, xhr.responseText);
             afiliacionMostrarMsg('Error en el servidor (' + xhr.status + ')', 'error');
+            if (callback) {
+                callback({ error: true, msg: 'Error en el servidor (' + xhr.status + ')' });
+            }
         }
     };
 
     xhr.onerror = function() {
         console.error('Error de red');
         afiliacionMostrarMsg('Error de conexion con el servidor', 'error');
+        if (callback) {
+            callback({ error: true, msg: 'Error de conexion con el servidor' });
+        }
     };
 
     var params = new URLSearchParams();
@@ -57,24 +68,35 @@ function afiliacionAjaxFormData(accion, formData, callback) {
         if (xhr.status === 200) {
             try {
                 var respuesta = JSON.parse(xhr.responseText);
+                // Mostrar el mensaje pero SIEMPRE avisar al llamador para no dejar botones bloqueados
                 if (respuesta.error) {
                     afiliacionMostrarMsg(respuesta.msg, 'error');
-                } else if (callback) {
+                }
+                if (callback) {
                     callback(respuesta);
                 }
             } catch(e) {
                 console.error('Error parseando JSON FormData:', e, xhr.responseText);
                 afiliacionMostrarMsg('Error al procesar la respuesta del servidor', 'error');
+                if (callback) {
+                    callback({ error: true, msg: 'Error al procesar la respuesta del servidor' });
+                }
             }
         } else {
             console.error('Error HTTP:', xhr.status, xhr.responseText);
             afiliacionMostrarMsg('Error en el servidor (' + xhr.status + ')', 'error');
+            if (callback) {
+                callback({ error: true, msg: 'Error en el servidor (' + xhr.status + ')' });
+            }
         }
     };
 
     xhr.onerror = function() {
         console.error('Error de red FormData');
         afiliacionMostrarMsg('Error de conexion con el servidor', 'error');
+        if (callback) {
+            callback({ error: true, msg: 'Error de conexion con el servidor' });
+        }
     };
 
     xhr.send(formData);
