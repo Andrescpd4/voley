@@ -1,7 +1,10 @@
 ﻿-- ============================================================
--- VISTAS PARA MODULO AFILIACION - Versión Completa
+-- VISTAS PARA MODULO AFILIACION
 -- Ejecutar en la base de datos voley_plus
 -- ============================================================
+
+-- Asegurar columna observaciones en deportista
+ALTER TABLE `deportista` ADD COLUMN IF NOT EXISTS `observaciones` TEXT DEFAULT NULL AFTER `fecha_afiliacion`;
 
 -- Vista v_deportista: deportistas con datos completos de persona
 CREATE OR REPLACE VIEW `v_deportista` AS
@@ -50,8 +53,7 @@ FROM `deportista_acudiente` da
 INNER JOIN `persona` p ON da.`acudiente_id` = p.`id`
 LEFT JOIN `usuario` u ON p.`id` = u.`persona_id`;
 
--- Vista v_afiliacion: combina deportista + acudiente + documentos + usuario
--- Incluye TODOS los campos necesarios para formularios y listados
+-- Vista v_afiliacion: combina deportista + acudiente + documentos
 CREATE OR REPLACE VIEW `v_afiliacion` AS
 SELECT 
     da.`id` AS `id`,
@@ -68,55 +70,56 @@ SELECT
     d.`fecha_afiliacion` AS `fecha_solicitud`,
     d.`fecha_afiliacion` AS `fecha_aprobacion`,
     d.`observaciones` AS `observaciones`,
-    d.`created_at`,
-    d.`updated_at`,
     -- Datos deportista
-    dp.`tipo_documento` AS `dep_tipo_documento`,
-    dp.`identificacion` AS `dep_identificacion`,
-    dp.`nombre1` AS `dep_nombre1`,
-    dp.`nombre2` AS `dep_nombre2`,
-    dp.`apellido1` AS `dep_apellido1`,
-    dp.`apellido2` AS `dep_apellido2`,
-    dp.`fecha_nacimiento` AS `dep_fecha_nacimiento`,
-    dp.`genero` AS `dep_genero`,
-    dp.`celular` AS `dep_celular`,
-    dp.`correo` AS `dep_correo`,
-    dp.`direccion` AS `dep_direccion`,
-    dp.`foto` AS `dep_foto`,
-    dp.`categoria_id` AS `dep_categoria_id`,
-    dp.`eps` AS `dep_eps`,
-    dp.`rh` AS `dep_rh`,
-    dp.`alergias` AS `dep_alergias`,
-    dp.`contacto_emergencia` AS `dep_contacto_emergencia_nombre`,
-    dp.`telefono_emergencia` AS `dep_contacto_emergencia_telefono`,
+    pd.`tipo_documento` AS `deportista_tipo_documento`,
+    pd.`identificacion` AS `deportista_identificacion`,
+    pd.`nombre1` AS `deportista_nombre1`,
+    pd.`nombre2` AS `deportista_nombre2`,
+    pd.`apellido1` AS `deportista_apellido1`,
+    pd.`apellido2` AS `deportista_apellido2`,
+    pd.`fecha_nacimiento` AS `deportista_fecha_nacimiento`,
+    pd.`genero` AS `deportista_genero`,
+    pd.`celular` AS `deportista_celular`,
+    pd.`correo` AS `deportista_correo`,
+    pd.`direccion` AS `deportista_direccion`,
+    pd.`foto` AS `deportista_foto`,
+    d.`eps` AS `deportista_eps`,
+    d.`rh` AS `deportista_rh`,
+    d.`alergias` AS `deportista_alergias`,
+    d.`contacto_emergencia_nombre` AS `deportista_contacto_emergencia`,
+    d.`contacto_emergencia_telefono` AS `deportista_telefono_emergencia`,
+    d.`categoria_id` AS `deportista_categoria_id`,
     -- Datos acudiente
-    ap.`tipo_documento` AS `acu_tipo_documento`,
-    ap.`identificacion` AS `acu_identificacion`,
-    ap.`nombre1` AS `acu_nombre1`,
-    ap.`nombre2` AS `acu_nombre2`,
-    ap.`apellido1` AS `acu_apellido1`,
-    ap.`apellido2` AS `acu_apellido2`,
-    ap.`celular` AS `acu_celular`,
-    ap.`correo` AS `acu_correo`,
-    ap.`direccion` AS `acu_direccion`,
-    da.`parentesco` AS `acu_parentesco`,
-    da.`es_principal` AS `acu_es_principal`,
-    ap.`usuario_id` AS `acu_usuario_id`,
-    ap.`usuario_rol` AS `acu_usuario_rol`,
-    -- Documentos: subquery para obtener último documento por tipo
-    (SELECT GROUP_CONCAT(CONCAT(td.`slug`, ':', doc.`archivo`, ':', doc.`estado`) SEPARATOR '|')
-     FROM `documento` doc
+    pa.`tipo_documento` AS `acudiente_tipo_documento`,
+    pa.`identificacion` AS `acudiente_identificacion`,
+    pa.`nombre1` AS `acudiente_nombre1`,
+    pa.`nombre2` AS `acudiente_nombre2`,
+    pa.`apellido1` AS `acudiente_apellido1`,
+    pa.`apellido2` AS `acudiente_apellido2`,
+    pa.`celular` AS `acudiente_celular`,
+    pa.`correo` AS `acudiente_correo`,
+    pa.`direccion` AS `acudiente_direccion`,
+    da.`parentesco` AS `acudiente_parentesco`,
+    -- Usuario acudiente
+    ua.`id` AS `acudiente_usuario_id`,
+    ua.`rol_id` AS `acudiente_usuario_rol`,
+    -- PDF principal (documento_identidad)
+    (SELECT doc.`archivo` FROM `documento` doc 
      INNER JOIN `tipo_documento` td ON doc.`tipo_documento_id` = td.`id`
-     WHERE doc.`deportista_id` = d.`id` AND doc.`estado` IN ('aprobado', 'pendiente', 'en_revision')
-    ) AS `documentos_info`
+     WHERE doc.`deportista_id` = d.`id` 
+     AND td.`slug` = 'documento_identidad'
+     AND doc.`estado` = 'aprobado'
+     ORDER BY doc.`fecha_subida` DESC LIMIT 1) AS `pdf_ruta`,
+    d.`created_at`
 FROM `deportista` d
 INNER JOIN `deportista_acudiente` da ON d.`id` = da.`deportista_id`
-INNER JOIN `persona` dp ON d.`persona_id` = dp.`id`
-INNER JOIN `persona` ap ON da.`acudiente_id` = ap.`id`
+INNER JOIN `persona` pd ON d.`persona_id` = pd.`id`
+INNER JOIN `persona` pa ON da.`acudiente_id` = pa.`id`
+LEFT JOIN `usuario` ua ON pa.`id` = ua.`persona_id`
 WHERE da.`es_principal` = 1
    OR da.`id` = (SELECT MIN(id) FROM deportista_acudiente WHERE deportista_id = d.id);
 
--- Vista v_documentos_deportista: documentos por deportista para listado en modal
+-- Vista v_documentos_deportista: documentos por deportista y tipo
 CREATE OR REPLACE VIEW `v_documentos_deportista` AS
 SELECT 
     doc.`id`,
@@ -136,7 +139,3 @@ SELECT
 FROM `documento` doc
 INNER JOIN `tipo_documento` td ON doc.`tipo_documento_id` = td.`id`
 WHERE td.`activo` = 1;
-
--- ============================================================
--- FIN VISTAS
--- ============================================================

@@ -3,9 +3,11 @@
 // Se incluye en formulario.php ANTES de los tabs (function declarations son hoisted)
 ?>
 <script type="text/javascript">
-// ===== UTILIDADES GLOBALES DEL MODULO AFILIACION =====
+// ============================================================
+// UTILIDADES GLOBALES DEL MODULO AFILIACION
+// ============================================================
 
-// afiliacionAjax - peticion AJAX con token
+// 1. Peticion AJAX con JSON y Authorization header
 function afiliacionAjax(accion, datos, callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', page_root + accion, true);
@@ -22,30 +24,30 @@ function afiliacionAjax(accion, datos, callback) {
                     callback(respuesta);
                 }
             } catch(e) {
-                console.error('Error parsing response:', e);
-                afiliacionMostrarMsg('Error al procesar respuesta', 'error');
+                console.error('Error parseando JSON:', e, xhr.responseText);
+                afiliacionMostrarMsg('Error al procesar la respuesta del servidor', 'error');
             }
         } else {
-            console.error('HTTP error:', xhr.status, xhr.responseText);
-            afiliacionMostrarMsg('Error en el servidor', 'error');
+            console.error('Error HTTP:', xhr.status, xhr.responseText);
+            afiliacionMostrarMsg('Error en el servidor (' + xhr.status + ')', 'error');
         }
     };
 
     xhr.onerror = function() {
-        console.error('Network error');
-        afiliacionMostrarMsg('Error de conexion', 'error');
+        console.error('Error de red');
+        afiliacionMostrarMsg('Error de conexion con el servidor', 'error');
     };
 
     var params = new URLSearchParams();
-    for (var key in datos) {
-        if (datos[key] !== null && datos[key] !== undefined) {
-            params.append(key, datos[key]);
+    for (var clave in datos) {
+        if (datos[clave] !== null && datos[clave] !== undefined) {
+            params.append(clave, datos[clave]);
         }
     }
     xhr.send(params.toString());
 }
 
-// afiliacionAjaxFormData - peticion AJAX con FormData (para subida de archivos)
+// 2. Peticion AJAX con FormData (para subida de archivos)
 function afiliacionAjaxFormData(accion, formData, callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', page_root + accion, true);
@@ -61,101 +63,118 @@ function afiliacionAjaxFormData(accion, formData, callback) {
                     callback(respuesta);
                 }
             } catch(e) {
-                console.error('Error parsing response:', e);
-                afiliacionMostrarMsg('Error al procesar respuesta', 'error');
+                console.error('Error parseando JSON FormData:', e, xhr.responseText);
+                afiliacionMostrarMsg('Error al procesar la respuesta del servidor', 'error');
             }
         } else {
-            console.error('HTTP error:', xhr.status, xhr.responseText);
-            afiliacionMostrarMsg('Error en el servidor', 'error');
+            console.error('Error HTTP:', xhr.status, xhr.responseText);
+            afiliacionMostrarMsg('Error en el servidor (' + xhr.status + ')', 'error');
         }
     };
 
     xhr.onerror = function() {
-        console.error('Network error');
-        afiliacionMostrarMsg('Error de conexion', 'error');
+        console.error('Error de red FormData');
+        afiliacionMostrarMsg('Error de conexion con el servidor', 'error');
     };
 
     xhr.send(formData);
 }
 
-// afiliacionEsc - escape HTML basico (XSS protection)
+// 3. Escape de caracteres HTML para prevenir XSS
 function afiliacionEsc(valor) {
-    if (!valor) return '';
+    if (!valor && valor !== 0) {
+        return '';
+    }
     return valor.toString()
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
 
-// afiliacionMostrarMsg - mostrar mensaje toast
+// 4. Mostrar notificaciones Toast con colores del tema Voley+
 function afiliacionMostrarMsg(texto, tipo) {
     if (typeof Toastify !== 'undefined') {
-        var color = '#405189';
-        if (tipo == 'success') color = '#0ab39c';
-        if (tipo == 'error') color = '#f06548';
-        if (tipo == 'warning') color = '#f7b84b';
-        Toastify({ text: texto, duration: 3000, gravity: 'top', position: 'right', style: { background: color } }).showToast();
+        var colorFondo = '#405189';
+        if (tipo === 'success') { colorFondo = '#0ab39c'; }
+        if (tipo === 'error') { colorFondo = '#f06548'; }
+        if (tipo === 'warning') { colorFondo = '#f7b84b'; }
+        if (tipo === 'info') { colorFondo = '#405189'; }
+
+        Toastify({
+            text: texto,
+            duration: 3500,
+            gravity: 'top',
+            position: 'right',
+            style: { background: colorFondo }
+        }).showToast();
+    } else if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            text: texto,
+            icon: tipo === 'error' ? 'error' : (tipo === 'success' ? 'success' : 'info'),
+            toast: true,
+            position: 'top-end',
+            timer: 3500,
+            showConfirmButton: false
+        });
     } else {
         alert(texto);
     }
 }
 
-// afiliacionDebounce - debounce para busqueda
-function afiliacionDebounce(func, delay) {
-    var timeout;
+// 5. Formatear badges de estado con colores Voley+
+function afiliacionBadgeEstado(estado) {
+    var claseCss = 'bg-secondary';
+    var textoEstado = estado;
+
+    if (estado === 'aprobado' || estado === 'activo') {
+        claseCss = 'bg-success';
+        textoEstado = (estado === 'aprobado') ? 'Aprobado' : 'Activo';
+    } else if (estado === 'pendiente_revision') {
+        claseCss = 'bg-warning text-dark';
+        textoEstado = 'Pendiente Revision';
+    } else if (estado === 'requiere_info') {
+        claseCss = 'bg-warning text-dark';
+        textoEstado = 'Requiere Informacion';
+    } else if (estado === 'no_aprobado' || estado === 'rechazado') {
+        claseCss = 'bg-danger';
+        textoEstado = (estado === 'no_aprobado') ? 'No Aprobado' : 'Rechazado';
+    } else if (estado === 'borrador') {
+        claseCss = 'bg-secondary';
+        textoEstado = 'Borrador';
+    } else if (estado === 'inactivo') {
+        claseCss = 'bg-dark';
+        textoEstado = 'Inactivo';
+    }
+
+    return `<span class="badge ${claseCss}">${afiliacionEsc(textoEstado)}</span>`;
+}
+
+// 6. Barra de progreso visual
+function afiliacionBarraProgreso(porcentaje) {
+    var p = parseInt(porcentaje) || 0;
+    var colorBarra = 'bg-primary';
+    if (p === 100) { colorBarra = 'bg-success'; }
+    else if (p >= 50) { colorBarra = 'bg-warning'; }
+
+    return `<div class="progress" style="height: 18px;">
+        <div class="progress-bar ${colorBarra}" role="progressbar" style="width: ${p}%;" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100">
+            ${p}%
+        </div>
+    </div>`;
+}
+
+// 7. Debounce para evitar llamadas repetidas
+function afiliacionDebounce(funcion, espera) {
+    var temporizador;
     return function() {
         var contexto = this;
-        var args = arguments;
-        clearTimeout(timeout);
-        timeout = setTimeout(function() {
-            func.apply(contexto, args);
-        }, delay);
+        var argumentos = arguments;
+        clearTimeout(temporizador);
+        temporizador = setTimeout(function() {
+            funcion.apply(contexto, argumentos);
+        }, espera);
     };
-}
-
-// afiliacionFormatearEstado - retorna clase CSS y texto para badge de estado
-function afiliacionFormatearEstado(estado) {
-    var estadoClass = 'bg-secondary';
-    var estadoTexto = estado;
-    if (estado == 'aprobado' || estado == 'activo') { estadoClass = 'bg-success'; }
-    else if (estado == 'pendiente') { estadoClass = 'bg-info'; }
-    else if (estado == 'en_revision') { estadoClass = 'bg-warning'; }
-    else if (estado == 'rechazado' || estado == 'no_aprobado') { estadoClass = 'bg-danger'; }
-    else if (estado == 'borrador') { estadoClass = 'bg-secondary'; }
-    return { class: estadoClass, texto: estadoTexto };
-}
-
-// afiliacionCrearBotonesAccion - crear botones de accion para tabla
-function afiliacionCrearBotonesAccion(id, es_admin) {
-    var botones = '<div class="d-flex justify-content-center gap-1">';
-    botones += '<button class="btn btn-sm btn-soft-info afiliacion-btn-accion" onclick="afiliacionVer(' + id + ')" title="Ver detalle"><i class="ri-eye-line"></i></button>';
-    if (es_admin) {
-        botones += '<button class="btn btn-sm btn-soft-primary afiliacion-btn-accion accion-modificar" onclick="afiliacionAbrirEstado(' + id + ')" title="Cambiar estado"><i class="ri-edit-line"></i></button>';
-        botones += '<button class="btn btn-sm btn-soft-danger afiliacion-btn-accion accion-eliminar" onclick="afiliacionEliminar(' + id + ')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>';
-    }
-    botones += '</div>';
-    return botones;
-}
-
-// afiliacionCrearProgreso - crear barra de progreso HTML
-function afiliacionCrearProgreso(porcentaje) {
-    var p = parseInt(porcentaje) || 0;
-    return '<div class="progress" style="height: 20px;">' +
-        '<div class="progress-bar" role="progressbar" style="width: ' + p + '%;">' + p + '%</div>' +
-        '</div>';
-}
-
-// afiliacionCrearPDFLink - crear link o boton para PDF
-function afiliacionCrearPDFLink(pdf_ruta, es_admin) {
-    if (pdf_ruta && pdf_ruta !== '') {
-        if (es_admin) {
-            return '<a href="' + page_root + 'descarga.php?archivo=' + pdf_ruta + '" class="btn btn-sm btn-link text-primary" target="_blank" title="Ver PDF"><i class="ri-file-pdf-line"></i> Ver</a>';
-        } else {
-            return '<a href="' + page_root + 'descarga.php?archivo=' + pdf_ruta + '" class="btn btn-sm btn-link text-primary" target="_blank" title="Ver PDF"><i class="ri-file-pdf-line"></i> Ver PDF</a>';
-        }
-    }
-    return '<span class="text-muted">—</span>';
 }
 </script>
