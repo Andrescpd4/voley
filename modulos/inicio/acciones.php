@@ -95,17 +95,48 @@ class Formulario extends clase_base
     }
 
     /**
-     * Retorna datos para el dashboard
+     * Retorna datos para el dashboard (conteos reales para la tira de stats del inicio)
      */
     function dashboard()
     {
-        // Ejemplo de datos para el dashboard
+        // 1. Deportistas vigentes (todo menos inactivos)
+        $total_deportistas = $this->db->select_one("SELECT COUNT(*) FROM deportista WHERE estado != 'inactivo'");
+        if (!is_string($total_deportistas)) {
+            $total_deportistas = 0;
+        }
+
+        // 2. Solicitudes de afiliacion pendientes de revision
+        $nuevas_solicitudes = $this->db->select_one("SELECT COUNT(*) FROM deportista WHERE estado = 'pendiente_revision'");
+        if (!is_string($nuevas_solicitudes)) {
+            $nuevas_solicitudes = 0;
+        }
+
+        // 3. Documentos subidos pendientes de revision
+        $documentacion_pendiente = $this->db->select_one("SELECT COUNT(*) FROM documento WHERE estado = 'pendiente'");
+        if (!is_string($documentacion_pendiente)) {
+            $documentacion_pendiente = 0;
+        }
+
+        // 4. Eventos de hoy en adelante
+        $proximos_total = $this->db->select_one("SELECT COUNT(*) FROM evento WHERE fecha >= CURDATE()");
+        if (!is_string($proximos_total)) {
+            $proximos_total = 0;
+        }
+        $proximos_eventos = $this->db->select_all("SELECT nombre, fecha, lugar FROM evento WHERE fecha >= CURDATE() ORDER BY fecha ASC LIMIT 3");
+        if (!is_array($proximos_eventos)) {
+            $proximos_eventos = array();
+        }
+
+        // 5. Autorizaciones firmadas pendientes (si la tabla existe, si no queda en 0)
+        $autorizaciones_pendientes = 0;
+
         $datos = array(
-            'total_deportistas' => 0,
-            'nuevas_solicitudes' => 0,
-            'documentacion_pendiente' => 0,
-            'autorizaciones_pendientes' => 0,
-            'proximos_eventos' => array()
+            'total_deportistas' => intval($total_deportistas),
+            'nuevas_solicitudes' => intval($nuevas_solicitudes),
+            'documentacion_pendiente' => intval($documentacion_pendiente),
+            'autorizaciones_pendientes' => intval($autorizaciones_pendientes),
+            'proximos_total' => intval($proximos_total),
+            'proximos_eventos' => $proximos_eventos
         );
 
         echo json_encode(array('error' => false, 'data' => $datos));
