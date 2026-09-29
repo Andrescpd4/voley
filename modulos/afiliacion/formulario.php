@@ -20,15 +20,49 @@ if (!$es_admin && !$es_acudiente) {
 ?>
 
 <!-- ============================================================ -->
-<!-- LIBRERIAS Y CSS GLOBAL DE VELZON                            -->
+<!-- LIBRERIAS Y TOKENS DEL MODULO                               -->
 <!-- ============================================================ -->
-<!-- DataTables -->
+<!-- DataTables 2.x por CDN: el tema Velzon no trae esta version en local. -->
+<!-- SweetAlert2 y Toastify NO se incluyen aqui: ya son globales -->
+<!-- (cabeza.php y pie.php los cargan en local). -->
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css">
 <script type="text/javascript" src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
 
-<!-- SweetAlert2 -->
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<style type="text/css">
+/* Tokens del modulo Afiliaciones: un solo lugar para los colores */
+/* Los morados y semaforos son los mismos de Velzon (ver app.min.css: --vz-*) */
+.afili-encabezado {
+    background-color: rgb(194,69,139,0.04);
+    color: #ffffff;
+}
+.afili-encabezado-oscuro {
+    background-color: #1e1328; /* vino institucional Voley+ */
+    color: #ffffff;
+}
+.afili-encabezado .card-title,
+.afili-encabezado-oscuro .card-title,
+.afili-encabezado .modal-title,
+.afili-encabezado-oscuro .modal-title {
+    color: rgb(194, 69, 139);
+}
+/* Botones de solo icono con area tactil minima de 44px (WCAG 2.5.8) */
+.btn-afili-accion {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+/* Campos marcados como invalidos en la validacion de envio */
+.afili-invalido {
+    border-color: var(--vz-danger);
+}
+.afili-error-texto {
+    color: var(--vz-danger);
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+</style>
 
 <!-- ============================================================ -->
 <!-- SCRIPTS GLOBALES E INCLUSION DE UTILERIAS (HOISTING)         -->
@@ -43,45 +77,48 @@ if (!$es_admin && !$es_acudiente) {
         <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
-                    <!-- Nav Tabs estilo lavado_cubetas / Velzon -->
-                    <ul class="nav nav-tabs border-tab border-0 mb-3 nav-secondary" id="afiliacionTabs" role="tablist">
+                    <!-- Nav Tabs estilo Velzon (botones: no mueven el scroll como los enlaces) -->
+                    <ul class="nav nav-tabs mb-3" id="afiliacionTabs" role="tablist">
                         <?php if ($es_acudiente || $es_admin): ?>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link <?php echo !$es_admin ? 'active' : ''; ?> nav-border pt-0 txt-secondary nav-secondary"
-                               id="tab-registro-link"
-                               data-bs-toggle="tab"
-                               href="#tab-registro-content"
-                               role="tab"
-                               aria-controls="tab-registro-content"
-                               aria-selected="<?php echo !$es_admin ? 'true' : 'false'; ?>">
+                            <button class="nav-link <?php echo !$es_admin ? 'active' : ''; ?>"
+                                id="tab-registro-link"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-registro-content"
+                                type="button"
+                                role="tab"
+                                aria-controls="tab-registro-content"
+                                aria-selected="<?php echo !$es_admin ? 'true' : 'false'; ?>">
                                 <i class="ri-user-add-line me-1"></i> 1. Registro de Deportista
-                            </a>
+                            </button>
                         </li>
 
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link nav-border pt-0 txt-secondary nav-secondary"
-                               id="tab-mis-link"
-                               data-bs-toggle="tab"
-                               href="#tab-mis-content"
-                               role="tab"
-                               aria-controls="tab-mis-content"
-                               aria-selected="false">
+                            <button class="nav-link"
+                                id="tab-mis-link"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-mis-content"
+                                type="button"
+                                role="tab"
+                                aria-controls="tab-mis-content"
+                                aria-selected="false">
                                 <i class="ri-history-line me-1"></i> 2. Mis Solicitudes
-                            </a>
+                            </button>
                         </li>
                         <?php endif; ?>
 
                         <?php if ($es_admin): ?>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link active nav-border pt-0 txt-secondary nav-secondary"
-                               id="tab-gestion-link"
-                               data-bs-toggle="tab"
-                               href="#tab-gestion-content"
-                               role="tab"
-                               aria-controls="tab-gestion-content"
-                               aria-selected="true">
+                            <button class="nav-link active"
+                                id="tab-gestion-link"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-gestion-content"
+                                type="button"
+                                role="tab"
+                                aria-controls="tab-gestion-content"
+                                aria-selected="true">
                                 <i class="ri-shield-user-line me-1"></i> 3. Administracion de Afiliaciones
-                            </a>
+                            </button>
                         </li>
                         <?php endif; ?>
                     </ul>

@@ -31,7 +31,7 @@ if ($persona_id_sesion > 0) {
                     Si quieres registrar a nombre de un acudiente real, seleccionalo aqui.
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-medium mb-1">Registrar a nombre de</label>
+                    <label class="form-label fw-medium mb-1" for="reg_acudiente_override">Registrar a nombre de</label>
                     <select class="form-select" id="reg_acudiente_override" name="acudiente_id_override">
                         <option value="0">Mi propia persona (prueba rapida)</option>
                     </select>
@@ -43,32 +43,32 @@ if ($persona_id_sesion > 0) {
             <!-- SECCION 1: DATOS DEL DEPORTISTA                              -->
             <!-- ============================================================ -->
             <div class="card mb-3 border">
-                <div class="card-header" style="background: #1e1328; color: white;">
-                    <h6 class="card-title mb-0 text-black">
+                <div class="card-header afili-encabezado-oscuro">
+                    <h6 class="card-title mb-0">
                         <i class="ri-user-smile-line me-1"></i> 1. Datos Personales del Deportista (Niño / Niña)
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Primer Nombre <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_nombre1">Primer Nombre <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="reg_dep_nombre1" name="dep_nombre1" placeholder="Primer nombre" required maxlength="50">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Segundo Nombre</label>
+                            <label class="form-label" for="reg_dep_nombre2">Segundo Nombre</label>
                             <input type="text" class="form-control" id="reg_dep_nombre2" name="dep_nombre2" placeholder="Segundo nombre (opcional)" maxlength="50">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Primer Apellido <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_apellido1">Primer Apellido <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="reg_dep_apellido1" name="dep_apellido1" placeholder="Primer apellido" required maxlength="50">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Segundo Apellido</label>
+                            <label class="form-label" for="reg_dep_apellido2">Segundo Apellido</label>
                             <input type="text" class="form-control" id="reg_dep_apellido2" name="dep_apellido2" placeholder="Segundo apellido (opcional)" maxlength="50">
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Tipo de Documento <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_tipo_documento">Tipo de Documento <span class="text-danger">*</span></label>
                             <select class="form-select" id="reg_dep_tipo_documento" name="dep_tipo_documento" required>
                                 <option value="TI">Tarjeta de Identidad (TI)</option>
                                 <option value="RC">Registro Civil (RC)</option>
@@ -79,15 +79,15 @@ if ($persona_id_sesion > 0) {
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Numero de Documento <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_identificacion">Numero de Documento <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="reg_dep_identificacion" name="dep_identificacion" placeholder="Numero de documento" required maxlength="20">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Fecha de Nacimiento <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_fecha_nacimiento">Fecha de Nacimiento <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="reg_dep_fecha_nacimiento" name="dep_fecha_nacimiento" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Genero <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_genero">Genero <span class="text-danger">*</span></label>
                             <select class="form-select" id="reg_dep_genero" name="dep_genero" required>
                                 <option value="F">Femenino</option>
                                 <option value="M">Masculino</option>
@@ -96,17 +96,17 @@ if ($persona_id_sesion > 0) {
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">Categoria</label>
+                            <label class="form-label fw-medium" for="reg_dep_categoria_id">Categoria</label>
                             <select class="form-select" id="reg_dep_categoria_id" name="dep_categoria_id">
                                 <option value="">Seleccione categoria...</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-medium">EPS / SISBEN <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_eps">EPS / SISBEN <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="reg_dep_eps" name="dep_eps" placeholder="Nombre de EPS" required maxlength="100">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Grupo RH</label>
+                            <label class="form-label" for="reg_dep_rh">Grupo RH</label>
                             <select class="form-select" id="reg_dep_rh" name="dep_rh">
                                 <option value="">RH...</option>
                                 <option value="O+">O+</option>
@@ -120,7 +120,7 @@ if ($persona_id_sesion > 0) {
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Alergias o Condiciones Medicas</label>
+                            <label class="form-label" for="reg_dep_alergias">Alergias o Condiciones Medicas</label>
                             <input type="text" class="form-control" id="reg_dep_alergias" name="dep_alergias" placeholder="Ninguna o especificar...">
                         </div>
                     </div>
@@ -139,15 +139,15 @@ if ($persona_id_sesion > 0) {
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">Celular del Deportista</label>
+                            <label class="form-label" for="reg_dep_celular">Celular del Deportista</label>
                             <input type="tel" class="form-control" id="reg_dep_celular" name="dep_celular" placeholder="Numero de celular" maxlength="20">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Correo Electronico</label>
+                            <label class="form-label" for="reg_dep_correo">Correo Electronico</label>
                             <input type="email" class="form-control" id="reg_dep_correo" name="dep_correo" placeholder="correo@ejemplo.com" maxlength="100">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Direccion de Residencia</label>
+                            <label class="form-label" for="reg_dep_direccion">Direccion de Residencia</label>
                             <input type="text" class="form-control" id="reg_dep_direccion" name="dep_direccion" placeholder="Barrio, Calle, Numero">
                         </div>
                     </div>
@@ -198,17 +198,17 @@ if ($persona_id_sesion > 0) {
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Celular Acudiente (Editable)</label>
+                            <label class="form-label" for="reg_acu_celular">Celular Acudiente (Editable)</label>
                             <input type="tel" class="form-control" id="reg_acu_celular" name="acu_celular"
                                    value="<?php echo htmlspecialchars($datos_acudiente_actual['celular'] ?? ''); ?>" placeholder="Celular de contacto">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Correo Acudiente (Editable)</label>
+                            <label class="form-label" for="reg_acu_correo">Correo Acudiente (Editable)</label>
                             <input type="email" class="form-control" id="reg_acu_correo" name="acu_correo"
                                    value="<?php echo htmlspecialchars($datos_acudiente_actual['correo'] ?? ''); ?>" placeholder="Correo de notificaciones">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Direccion Acudiente (Editable)</label>
+                            <label class="form-label" for="reg_acu_direccion">Direccion Acudiente (Editable)</label>
                             <input type="text" class="form-control" id="reg_acu_direccion" name="acu_direccion"
                                    value="<?php echo htmlspecialchars($datos_acudiente_actual['direccion'] ?? ''); ?>" placeholder="Direccion del hogar">
                         </div>
@@ -228,11 +228,11 @@ if ($persona_id_sesion > 0) {
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Nombre de Contacto de Emergencia <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_contacto_nombre">Nombre de Contacto de Emergencia <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="reg_dep_contacto_nombre" name="dep_contacto_emergencia_nombre" placeholder="Nombre completo" required maxlength="100">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Telefono de Emergencia <span class="text-danger">*</span></label>
+                            <label class="form-label fw-medium" for="reg_dep_contacto_telefono">Telefono de Emergencia <span class="text-danger">*</span></label>
                             <input type="tel" class="form-control" id="reg_dep_contacto_telefono" name="dep_contacto_emergencia_telefono" placeholder="Numero de telefono / celular" required maxlength="20">
                         </div>
                     </div>
@@ -251,7 +251,7 @@ if ($persona_id_sesion > 0) {
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label">Observaciones Adicionales</label>
+                            <label class="form-label" for="reg_dep_observaciones">Observaciones Adicionales</label>
                             <textarea class="form-control" id="reg_dep_observaciones" name="dep_observaciones" rows="2" placeholder="Indique informacion relevante para el club (experiencia previa, horarios de preferencia, etc.)..."></textarea>
                         </div>
                         <div class="col-md-12">
@@ -282,7 +282,7 @@ if ($persona_id_sesion > 0) {
                         <button type="button" class="btn btn-outline-primary" id="btnGuardarBorrador" onclick="afiliacionGuardarRegistro('borrador')">
                             <i class="ri-save-line me-1"></i> Guardar Borrador
                         </button>
-                        <button type="button" class="btn btn-success" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
+                        <button type="button" class="btn btn-success text-dark" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
                             <i class="ri-send-plane-line me-1"></i> Enviar a Revision
                         </button>
                     </div>
@@ -296,10 +296,10 @@ if ($persona_id_sesion > 0) {
 <!-- MODAL: DOCUMENTOS REQUERIDOS (LISTA INDIVIDUAL)              -->
 <!-- ============================================================ -->
 <div class="modal fade" id="modalDocumentosRequeridos" tabindex="-1" aria-labelledby="modalDocumentosLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content">
-            <div class="modal-header" style="background: #405189; color: white;">
-                <h5 class="modal-title text-white" id="modalDocumentosLabel">
+            <div class="modal-header afili-encabezado">
+                <h5 class="modal-title" id="modalDocumentosLabel">
                     <i class="ri-folder-shield-line me-1"></i> Documentacion del Deportista
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -308,7 +308,7 @@ if ($persona_id_sesion > 0) {
                 <p class="text-muted small mb-3">
                     Suba los documentos solicitados en formato PDF o imagen (JPG, PNG). Tamano maximo por archivo: 10 MB.
                 </p>
-                <div class="list-group" id="contenedorListaDocumentos">
+                <div class="list-group" id="contenedorListaDocumentos" aria-live="polite">
                     <!-- Se carga dinamicamente con JavaScript -->
                     <div class="text-center py-4">
                         <span class="spinner-border spinner-border-sm text-primary"></span>
@@ -328,6 +328,9 @@ if ($persona_id_sesion > 0) {
 <!-- ============================================================ -->
 <script type="text/javascript">
 var modalDocsInstancia = null;
+// Cache local: evita pedir categorias y acudientes al servidor mas de una vez
+var afiliCacheCategorias = null;
+var afiliCacheAcudientes = null;
 
 jQuery(document).ready(function($) {
     // 1. Inicializar modal de documentos
@@ -346,42 +349,132 @@ jQuery(document).ready(function($) {
     }
 });
 
-// Cargar acudientes para el select solo-admin
+// Cargar acudientes para el select solo-admin (usa cache si ya se pidio antes)
 function afiliacionCargarAcudientesOverride() {
+    // Si ya tenemos la lista en memoria, pintarla sin ir al servidor
+    if (afiliCacheAcudientes !== null) {
+        afiliacionPintarAcudientesOverride(afiliCacheAcudientes);
+        return;
+    }
     afiliacionAjax('listar_acudientes_admin', {}, function(respuesta) {
         if (!respuesta.error && respuesta.data) {
-            var select = document.getElementById('reg_acudiente_override');
-            if (!select) {
-                return;
-            }
-            var lista = respuesta.data;
-            for (var i = 0; i < lista.length; i++) {
-                var item = lista[i];
-                var opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.nombre;
-                select.appendChild(opt);
-            }
+            afiliCacheAcudientes = respuesta.data;
+            afiliacionPintarAcudientesOverride(afiliCacheAcudientes);
         }
     });
 }
 
-// Cargar categorias activas desde el backend
+// Pintar las opciones del select solo-admin
+function afiliacionPintarAcudientesOverride(lista) {
+    var select = document.getElementById('reg_acudiente_override');
+    if (!select) {
+        return;
+    }
+    for (var i = 0; i < lista.length; i++) {
+        var item = lista[i];
+        var opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.nombre;
+        select.appendChild(opt);
+    }
+}
+
+// Cargar categorias activas desde el backend (usa cache si ya se pidio antes)
 function afiliacionCargarCategoriasSelect() {
+    // Si ya tenemos la lista en memoria, pintarla sin ir al servidor
+    if (afiliCacheCategorias !== null) {
+        afiliacionPintarCategoriasSelect(afiliCacheCategorias);
+        return;
+    }
     afiliacionAjax('listar_categorias', {}, function(respuesta) {
         if (!respuesta.error && respuesta.data) {
-            var select = document.getElementById('reg_dep_categoria_id');
-            select.innerHTML = '<option value="">Seleccione categoria...</option>';
-            var lista = respuesta.data;
-            for (var i = 0; i < lista.length; i++) {
-                var item = lista[i];
-                var opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.nombre + ' (' + item.edad_minima + '-' + item.edad_maxima + ' anos)';
-                select.appendChild(opt);
-            }
+            afiliCacheCategorias = respuesta.data;
+            afiliacionPintarCategoriasSelect(afiliCacheCategorias);
         }
     });
+}
+
+// Pintar las opciones del select de categorias
+function afiliacionPintarCategoriasSelect(lista) {
+    var select = document.getElementById('reg_dep_categoria_id');
+    if (!select) {
+        return;
+    }
+    select.innerHTML = '<option value="">Seleccione categoria...</option>';
+    for (var i = 0; i < lista.length; i++) {
+        var item = lista[i];
+        var opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.nombre + ' (' + item.edad_minima + '-' + item.edad_maxima + ' años)';
+        select.appendChild(opt);
+    }
+}
+
+// Quitar todas las marcas de error del formulario
+function afiliacionLimpiarErrores() {
+    var form = document.getElementById('formRegistroAfiliacion');
+    var marcados = form.querySelectorAll('.afili-invalido');
+    for (var i = 0; i < marcados.length; i++) {
+        marcados[i].classList.remove('afili-invalido');
+        marcados[i].removeAttribute('aria-invalid');
+    }
+    var textos = form.querySelectorAll('.afili-error-texto');
+    for (var j = 0; j < textos.length; j++) {
+        textos[j].parentNode.removeChild(textos[j]);
+    }
+}
+
+// Marcar un campo con error visible y texto de ayuda
+function afiliacionMarcarCampo(id_campo, mensaje) {
+    var campo = document.getElementById(id_campo);
+    if (!campo) {
+        return;
+    }
+    campo.classList.add('afili-invalido');
+    campo.setAttribute('aria-invalid', 'true');
+    // Crear el texto de ayuda debajo del campo
+    var ayuda = document.createElement('div');
+    ayuda.className = 'afili-error-texto';
+    ayuda.textContent = mensaje;
+    campo.parentNode.appendChild(ayuda);
+}
+
+// Validar los campos obligatorios antes de enviar a revision
+// Marca cada campo vacio en rojo y lleva el foco al primero
+function afiliacionValidarEnvio() {
+    var obligatorios = [
+        { id: 'reg_dep_nombre1', nombre: 'Primer nombre' },
+        { id: 'reg_dep_apellido1', nombre: 'Primer apellido' },
+        { id: 'reg_dep_identificacion', nombre: 'Numero de documento' },
+        { id: 'reg_dep_fecha_nacimiento', nombre: 'Fecha de nacimiento' },
+        { id: 'reg_dep_eps', nombre: 'EPS / SISBEN' },
+        { id: 'reg_dep_contacto_nombre', nombre: 'Nombre de contacto de emergencia' },
+        { id: 'reg_dep_contacto_telefono', nombre: 'Telefono de emergencia' }
+    ];
+    var primer_campo_vacio = null;
+    var total_vacios = 0;
+    for (var i = 0; i < obligatorios.length; i++) {
+        var campo = document.getElementById(obligatorios[i].id);
+        var valor = '';
+        if (campo) {
+            valor = campo.value.trim();
+        }
+        if (valor === '') {
+            afiliacionMarcarCampo(obligatorios[i].id, 'El campo ' + obligatorios[i].nombre + ' es obligatorio.');
+            total_vacios = total_vacios + 1;
+            if (primer_campo_vacio === null) {
+                primer_campo_vacio = campo;
+            }
+        }
+    }
+    // Llevar el foco al primer campo con error
+    if (primer_campo_vacio !== null) {
+        primer_campo_vacio.focus();
+    }
+    if (total_vacios > 0) {
+        return false;
+    }
+    return true;
 }
 
 // Guardar formulario (borrador o envio a revision)
@@ -389,18 +482,14 @@ function afiliacionGuardarRegistro(modo) {
     var form = document.getElementById('formRegistroAfiliacion');
     document.getElementById('reg_modo_guardado').value = modo;
 
-    // Validacion basica en cliente para envio
-    if (modo === 'enviar') {
-        var nombre1 = document.getElementById('reg_dep_nombre1').value.trim();
-        var apellido1 = document.getElementById('reg_dep_apellido1').value.trim();
-        var identificacion = document.getElementById('reg_dep_identificacion').value.trim();
-        var fechaNac = document.getElementById('reg_dep_fecha_nacimiento').value.trim();
-        var eps = document.getElementById('reg_dep_eps').value.trim();
-        var contactoNom = document.getElementById('reg_dep_contacto_nombre').value.trim();
-        var contactoTel = document.getElementById('reg_dep_contacto_telefono').value.trim();
+    // Quitar marcas de error anteriores
+    afiliacionLimpiarErrores();
 
-        if (nombre1 === '' || apellido1 === '' || identificacion === '' || fechaNac === '' || eps === '' || contactoNom === '' || contactoTel === '') {
-            afiliacionMostrarMsg('Por favor complete todos los campos obligatorios (*) antes de enviar a revision', 'warning');
+    // Validacion en cliente solo para envio (el borrador permite incompletos)
+    if (modo === 'enviar') {
+        var valido = afiliacionValidarEnvio();
+        if (!valido) {
+            afiliacionMostrarMsg('Por favor complete los campos marcados en rojo antes de enviar a revision', 'warning');
             return;
         }
     }
@@ -485,14 +574,14 @@ function afiliacionCrearFilaTipoDocumento(tipo, deportistaId) {
     if (subido && tipo.documento) {
         var rutaArchivo = afiliacionEsc(tipo.documento.archivo);
         var docId = tipo.documento.id;
-        badgeHtml = `<span class="badge bg-success"><i class="ri-check-line me-1"></i>Subido</span>`;
+        badgeHtml = `<span class="badge bg-success text-dark"><i class="ri-check-line me-1"></i>Subido</span>`;
         accionesHtml = `
-            <a href="${rutaArchivo}" target="_blank" class="btn btn-sm btn-outline-info" title="Ver documento"><i class="ri-eye-line"></i></a>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="afiliacionEliminarDoc(${docId}, ${deportistaId})" title="Eliminar"><i class="ri-delete-bin-line"></i></button>
+            <a href="${rutaArchivo}" target="_blank" class="btn btn-sm btn-outline-info btn-afili-accion" title="Ver documento" aria-label="Ver documento adjunto"><i class="ri-eye-line"></i></a>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-afili-accion" onclick="afiliacionEliminarDoc(${docId}, ${deportistaId})" title="Eliminar" aria-label="Eliminar documento adjunto"><i class="ri-delete-bin-line"></i></button>
         `;
     } else {
         if (obligatorio) {
-            badgeHtml = `<span class="badge bg-danger">Requerido</span>`;
+            badgeHtml = `<span class="badge bg-danger text-dark">Requerido</span>`;
         } else {
             badgeHtml = `<span class="badge bg-secondary">Opcional</span>`;
         }
@@ -544,23 +633,22 @@ function afiliacionSubirArchivoTipo(tipoDocId, deportistaId) {
     });
 }
 
-// Eliminar documento
+// Eliminar documento (pide confirmacion con el estilo del sistema)
 function afiliacionEliminarDoc(documentoId, deportistaId) {
-    if (!confirm('Esta seguro de eliminar este documento?')) {
-        return;
-    }
-
-    afiliacionAjax('eliminar_documento_acudiente', { documento_id: documentoId }, function(respuesta) {
-        if (!respuesta.error) {
-            afiliacionMostrarMsg(respuesta.msg, 'success');
-            afiliacionCargarListaDocumentos(deportistaId);
-        }
+    afiliacionConfirmar('Eliminar documento', 'Esta seguro de eliminar este documento?', 'Si, eliminar', function() {
+        afiliacionAjax('eliminar_documento_acudiente', { documento_id: documentoId }, function(respuesta) {
+            if (!respuesta.error) {
+                afiliacionMostrarMsg(respuesta.msg, 'success');
+                afiliacionCargarListaDocumentos(deportistaId);
+            }
+        });
     });
 }
 
 // Limpiar formulario completo para un nuevo registro
 function afiliacionLimpiarFormularioRegistro() {
     document.getElementById('formRegistroAfiliacion').reset();
+    afiliacionLimpiarErrores();
     document.getElementById('reg_deportista_id').value = '0';
     document.getElementById('reg_modo_guardado').value = 'borrador';
     document.getElementById('btnAbrirModalDocs').disabled = true;

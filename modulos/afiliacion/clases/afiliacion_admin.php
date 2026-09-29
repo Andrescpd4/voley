@@ -117,9 +117,10 @@ trait afiliacion_admin
             $dep_id = $rw['deportista_id'];
 
             // Botones de accion renderizados en el backend
-            $rw['btn_ver'] = '<button class="btn btn-sm btn-outline-info accion-ver" onclick="afiliacionGestionVer(' . $id . ')" title="Ver Ficha"><i class="ri-eye-line"></i></button>';
-            $rw['btn_estado'] = '<button class="btn btn-sm btn-outline-primary accion-modificar" onclick="afiliacionGestionAbrirEstado(' . $id . ')" title="Cambiar Estado"><i class="ri-edit-line"></i></button>';
-            $rw['btn_eliminar'] = '<button class="btn btn-sm btn-outline-danger accion-eliminar" onclick="afiliacionGestionEliminar(' . $id . ')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>';
+            // Llevan aria-label para lectores de pantalla y area tactil minima de 44px
+            $rw['btn_ver'] = '<button class="btn btn-sm btn-outline-info btn-afili-accion accion-ver" onclick="afiliacionGestionVer(' . $id . ')" title="Ver Ficha" aria-label="Ver ficha de la solicitud"><i class="ri-eye-line"></i></button>';
+            $rw['btn_estado'] = '<button class="btn btn-sm btn-outline-primary btn-afili-accion accion-modificar" onclick="afiliacionGestionAbrirEstado(' . $id . ')" title="Cambiar Estado" aria-label="Cambiar estado de la solicitud"><i class="ri-edit-line"></i></button>';
+            $rw['btn_eliminar'] = '<button class="btn btn-sm btn-outline-danger btn-afili-accion accion-eliminar" onclick="afiliacionGestionEliminar(' . $id . ')" title="Eliminar" aria-label="Desactivar solicitud de afiliacion"><i class="ri-delete-bin-line"></i></button>';
 
             $rw['num'] = $num++;
             $rw['progreso'] = $rw['porcentaje_completado'];

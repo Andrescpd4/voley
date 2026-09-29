@@ -14,11 +14,11 @@ if (!$es_acudiente && !$es_admin) {
 
 <!-- ===== TAB 2: HISTORIAL DE SOLICITUDES DEL ACUDIENTE ===== -->
 <div class="card border">
-    <div class="card-header d-flex justify-content-between align-items-center" style="background: #405189; color: white;">
-        <h6 class="card-title mb-0 text-white">
+    <div class="card-header afili-encabezado d-flex justify-content-between align-items-center">
+        <h6 class="card-title mb-0">
             <i class="ri-history-line me-1"></i> Mis Solicitudes de Afiliacion
         </h6>
-        <button type="button" class="btn btn-sm btn-light" onclick="afiliacionMisSolicitudesCargarDatos()">
+        <button type="button" class="btn btn-sm btn-light btn-afili-accion" onclick="afiliacionMisSolicitudesCargarDatos()" aria-label="Actualizar lista de solicitudes">
             <i class="ri-refresh-line me-1"></i> Actualizar
         </button>
     </div>
@@ -36,7 +36,7 @@ if (!$es_acudiente && !$es_admin) {
                         <th style="width: 100px;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
-                <tbody id="tbodyMisSolicitudes">
+                <tbody id="tbodyMisSolicitudes" aria-live="polite">
                     <tr>
                         <td colspan="7" class="text-center py-4 text-muted">
                             <span class="spinner-border spinner-border-sm text-primary"></span>
@@ -53,10 +53,10 @@ if (!$es_acudiente && !$es_admin) {
 <!-- MODAL: VER DETALLE DE MI SOLICITUD                           -->
 <!-- ============================================================ -->
 <div class="modal fade" id="modalVerMiSolicitud" tabindex="-1" aria-labelledby="modalVerMiSolicitudLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content">
-            <div class="modal-header" style="background: #405189; color: white;">
-                <h5 class="modal-title text-white" id="modalVerMiSolicitudLabel">
+            <div class="modal-header afili-encabezado">
+                <h5 class="modal-title" id="modalVerMiSolicitudLabel">
                     <i class="ri-file-user-line me-1"></i> Ficha de Solicitud de Afiliacion
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -135,7 +135,7 @@ function afiliacionCrearFilaMiSolicitud(item) {
         <td>${fecha}</td>
         <td><small class="text-muted">${obs}</small></td>
         <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-info" onclick="afiliacionVerMiDetalle(${depId})" title="Ver ficha completa">
+            <button type="button" class="btn btn-sm btn-outline-info btn-afili-accion" onclick="afiliacionVerMiDetalle(${depId})" title="Ver ficha completa" aria-label="Ver ficha completa de ${nombre}">
                 <i class="ri-eye-line"></i> Ver
             </button>
         </td>
@@ -160,102 +160,9 @@ function afiliacionVerMiDetalle(deportistaId) {
 }
 
 // Armar el HTML completo de la ficha de afiliacion
+// Usa el constructor compartido de utilerias_js.php (una sola plantilla para admin y acudiente)
 function afiliacionArmarHtmlFichaCompleta(d) {
-    var depNombre = afiliacionEsc((d.nombre1 || '') + ' ' + (d.nombre2 || '') + ' ' + (d.apellido1 || '') + ' ' + (d.apellido2 || ''));
-    var depDoc = afiliacionEsc((d.tipo_documento || '') + ' ' + (d.identificacion || ''));
-    var depFechaNac = afiliacionEsc(d.fecha_nacimiento || '-');
-    var depGenero = (d.genero === 'F') ? 'Femenino' : 'Masculino';
-    var depEps = afiliacionEsc(d.eps || '-');
-    var depRh = afiliacionEsc(d.rh || '-');
-    var depCat = afiliacionEsc(d.categoria_nombre || '-');
-    var depAlergias = afiliacionEsc(d.alergias || 'Ninguna');
-    var depContacto = afiliacionEsc((d.contacto_emergencia_nombre || '-') + ' (' + (d.contacto_emergencia_telefono || '-') + ')');
-    var depObs = afiliacionEsc(d.observaciones || 'Sin observaciones');
-    var badgeEstado = afiliacionBadgeEstado(d.estado);
-
-    // Datos del acudiente
-    var acu = d.acudiente || {};
-    var acuNombre = afiliacionEsc((acu.nombre1 || '') + ' ' + (acu.nombre2 || '') + ' ' + (acu.apellido1 || '') + ' ' + (acu.apellido2 || ''));
-    var acuDoc = afiliacionEsc((acu.tipo_documento || '') + ' ' + (acu.identificacion || ''));
-    var acuTel = afiliacionEsc(acu.celular || '-');
-    var acuCorreo = afiliacionEsc(acu.correo || '-');
-    var parentesco = afiliacionEsc(d.parentesco || 'Acudiente');
-
-    // Documentos adjuntos
-    var docs = d.documentos || [];
-    var docsHtml = '';
-    if (docs.length === 0) {
-        docsHtml = '<li class="list-group-item text-muted">No se han adjuntado documentos aun.</li>';
-    } else {
-        for (var i = 0; i < docs.length; i++) {
-            var doc = docs[i];
-            var docTipo = afiliacionEsc(doc.tipo_nombre);
-            var docArchivo = afiliacionEsc(doc.archivo);
-            var docEstado = afiliacionEsc(doc.estado);
-            docsHtml += `
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>${docTipo}</strong>
-                    <span class="badge bg-light text-dark ms-2">${docEstado}</span>
-                </div>
-                <a href="${docArchivo}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri-download-line me-1"></i>Ver / Descargar</a>
-            </li>`;
-        }
-    }
-
-    return `
-    <div class="row g-3">
-        <div class="col-12 text-center pb-2 border-bottom">
-            <h5 class="mb-1 text-primary">${depNombre}</h5>
-            <div>${badgeEstado}</div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card h-100 bg-light border-0">
-                <div class="card-body">
-                    <h6 class="card-title text-primary"><i class="ri-user-smile-line me-1"></i> Datos del Deportista</h6>
-                    <table class="table table-sm table-borderless mb-0">
-                        <tr><td class="text-muted" style="width: 140px;">Documento:</td><td class="fw-medium">${depDoc}</td></tr>
-                        <tr><td class="text-muted">Nacimiento:</td><td>${depFechaNac}</td></tr>
-                        <tr><td class="text-muted">Genero:</td><td>${depGenero}</td></tr>
-                        <tr><td class="text-muted">Categoria:</td><td>${depCat}</td></tr>
-                        <tr><td class="text-muted">EPS / SISBEN:</td><td>${depEps}</td></tr>
-                        <tr><td class="text-muted">RH:</td><td>${depRh}</td></tr>
-                        <tr><td class="text-muted">Alergias:</td><td>${depAlergias}</td></tr>
-                        <tr><td class="text-muted">Emergencia:</td><td>${depContacto}</td></tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card h-100 bg-light border-0">
-                <div class="card-body">
-                    <h6 class="card-title text-primary"><i class="ri-parent-line me-1"></i> Datos del Acudiente</h6>
-                    <table class="table table-sm table-borderless mb-0">
-                        <tr><td class="text-muted" style="width: 140px;">Nombre:</td><td class="fw-medium">${acuNombre}</td></tr>
-                        <tr><td class="text-muted">Parentesco:</td><td class="text-capitalize">${parentesco}</td></tr>
-                        <tr><td class="text-muted">Documento:</td><td>${acuDoc}</td></tr>
-                        <tr><td class="text-muted">Celular:</td><td>${acuTel}</td></tr>
-                        <tr><td class="text-muted">Correo:</td><td>${acuCorreo}</td></tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12">
-            <h6 class="text-primary mt-2"><i class="ri-folder-shield-line me-1"></i> Documentos Adjuntos</h6>
-            <ul class="list-group">
-                ${docsHtml}
-            </ul>
-        </div>
-
-        <div class="col-12">
-            <div class="alert alert-secondary mb-0">
-                <strong>Observaciones del Club:</strong><br>
-                ${depObs}
-            </div>
-        </div>
-    </div>`;
+    var ficha = afiliacionNormalizarFicha(d);
+    return afiliacionArmarFichaHtml(ficha, false);
 }
 </script>
