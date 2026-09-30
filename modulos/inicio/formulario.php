@@ -261,7 +261,7 @@ function inicioAjax(nombre_accion, datos_formulario, funcion_retorno) {
                 funcion_retorno({ error: true, msg: 'Respuesta no válida del servidor' });
             }
         } else {
-            funcion_retorno({ error: true, msg: 'Error en el servidor (' + peticion_http.status + ')' });
+            funcion_retorno({ error: true, msg: `Error en el servidor (${peticion_http.status})` });
         }
     };
 
@@ -270,7 +270,9 @@ function inicioAjax(nombre_accion, datos_formulario, funcion_retorno) {
     };
 
     var parametros_url = new URLSearchParams();
-    for (var clave_campo in datos_formulario) {
+    var claves_formulario = Object.keys(datos_formulario);
+    for (var i = 0; i < claves_formulario.length; i++) {
+        var clave_campo = claves_formulario[i];
         var valor_campo = datos_formulario[clave_campo];
         if (valor_campo !== null && valor_campo !== undefined) {
             parametros_url.append(clave_campo, valor_campo);
