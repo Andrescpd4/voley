@@ -1,333 +1,409 @@
 <?php
 // ============================================================
-// LISTADO USUARIOS — Backend (CRUD)
-// Modulo de gestion de usuarios adaptado a base voley_plus
+// LISTADO USUARIOS — Backend Voley+ (sin herencia de logistics)
+// Solo toca: persona + usuario + admin_usuario (el rol basta, sin tablas extra)
+// No usa: datos_laborales, plantas, tipo_contrato, sexo, estado
 // ============================================================
 
 require_once("php/formulario_basico.php");
 
 class Persona extends formulario_basico
 {
+    // 1. Leer un campo del POST sin usar ?? ni ternarios
+    function leer_post($nombre_campo, $valor_defecto)
+    {
+        if (isset($_POST[$nombre_campo])) {
+            return trim($_POST[$nombre_campo]);
+        } else {
+            return $valor_defecto;
+        }
+    }
+
+    // 2. Validar campos minimos del formulario
     function validar()
     {
         $v = new Validation($_POST);
-        $v->addRules('user', 'Usuario de ingreso', array('required' => true, 'maxLength' => 115));
-        $v->addRules('identifica', 'Documento de identificacion', array('required' => true, 'maxLength' => 20));
-        $v->addRules('apellido1', 'Primer Apellido', array('required' => true, 'maxLength' => 80));
-        $v->addRules('nombre1', 'Primer Nombre', array('required' => true, 'maxLength' => 80));
-        $v->addRules('telefono', 'Celular', array('required' => true, 'maxLength' => 120));
-        $v->addRules('correo', 'Correo', array('required' => true, 'maxLength' => 145));
+        $v->addRules('identifica', 'Documento', array('required' => true, 'maxLength' => 20));
+        $v->addRules('nombre1', 'Primer Nombre', array('required' => true, 'maxLength' => 50));
+        $v->addRules('apellido1', 'Primer Apellido', array('required' => true, 'maxLength' => 50));
+        $v->addRules('telefono', 'Celular', array('required' => true, 'maxLength' => 20));
+        $v->addRules('correo', 'Correo', array('required' => true, 'maxLength' => 100));
+        $v->addRules('login', 'Usuario de ingreso', array('required' => true, 'maxLength' => 50));
 
-        $result = $v->validate();
+        $resultado = $v->validate();
 
-        if ($result['messages'] == "") {
+        if ($resultado['messages'] == "") {
             return true;
         } else {
-            $r = array();
-            $r['error'] = true;
-            $r['msg'] = $result['messages'];
-            $r['bad_fields'] = $result['bad_fields'];
-            $r['errors'] = $result['errors'];
-            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            $respuesta = array();
+            $respuesta['error'] = true;
+            $respuesta['msg'] = $resultado['messages'];
+            $respuesta['bad_fields'] = $resultado['bad_fields'];
+            $respuesta['errors'] = $resultado['errors'];
+            echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
             exit(0);
         }
     }
 
+    // 3. Revisar duplicados de documento y login
+    function validar_duplicados($documento, $login, $persona_id)
+    {
+        // 3.1 Documento repetido en otra persona
+        $documento_seguro = $this->db->escape_string($documento);
+        $sql_documento = "SELECT id FROM persona WHERE identificacion = '" . $documento_seguro . "' AND id <> " . intval($persona_id);
+        $existe_documento = $this->db->select_row($sql_documento);
+        if (is_array($existe_documento)) {
+            if (isset($existe_documento['id'])) {
+                $respuesta = array();
+                $respuesta['error'] = true;
+                $respuesta['msg'] = "El documento ya esta registrado en otro usuario.";
+                echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
+                exit(0);
+            }
+        }
+
+        // 3.2 Login repetido en otro usuario
+        $login_seguro = $this->db->escape_string($login);
+        $sql_login = "SELECT persona_id FROM usuario WHERE login = '" . $login_seguro . "' AND persona_id <> " . intval($persona_id);
+        $existe_login = $this->db->select_row($sql_login);
+        if (is_array($existe_login)) {
+            if (isset($existe_login['persona_id'])) {
+                $respuesta = array();
+                $respuesta['error'] = true;
+                $respuesta['msg'] = "El usuario de ingreso ya existe. Elija otro.";
+                echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
+                exit(0);
+            }
+        }
+    }
+
+    // 4. Crear usuario nuevo
     function agregar()
     {
         if ($this->validar() == false) {
             exit(0);
         }
 
-        // 1. Extraer datos del formulario
-        $user = trim($_POST['user'] ?? '');
-        $identificacion = trim($_POST['identifica'] ?? '');
-        $nombre1 = trim($_POST['nombre1'] ?? '');
-        $nombre2 = trim($_POST['nombre2'] ?? '');
-        $apellido1 = trim($_POST['apellido1'] ?? '');
-        $apellido2 = trim($_POST['apellido2'] ?? '');
-        $celular = trim($_POST['telefono'] ?? '');
-        $correo = trim($_POST['correo'] ?? '');
-        $sexo_id = $_POST['sexo_id'] ?? '1';
-        $genero = ($sexo_id == '2' || $sexo_id == 'F') ? 'F' : 'M';
-        $tipo_doc = $_POST['tipoide'] ?? 'CC';
-        $rol_id = intval($_POST['rol'] ?? 3);
-        $clave_raw = trim($_POST['clave'] ?? '12345');
-        if ($clave_raw == '') {
-            $clave_raw = '12345';
+        // 4.1 Leer campos del formulario
+        $tipo_documento = $this->leer_post('tipo_documento', 'CC');
+        $documento = $this->leer_post('identifica', '');
+        $nombre1 = $this->leer_post('nombre1', '');
+        $nombre2 = $this->leer_post('nombre2', '');
+        $apellido1 = $this->leer_post('apellido1', '');
+        $apellido2 = $this->leer_post('apellido2', '');
+        $genero = $this->leer_post('genero', 'M');
+        $celular = $this->leer_post('telefono', '');
+        $correo = $this->leer_post('correo', '');
+        $login = $this->leer_post('login', '');
+        $rol_id = intval($this->leer_post('rol', '3'));
+        $activo = intval($this->leer_post('activo', '1'));
+        $clave_texto = $this->leer_post('clave', '');
+
+        // 4.2 Validar rol permitido (1, 2, 3, 4)
+        if ($rol_id < 1) {
+            $rol_id = 3;
+        }
+        if ($rol_id > 4) {
+            $rol_id = 3;
         }
 
-        // Datos laborales
-        $dl_fecha_ingreso = $_POST['fecha_ingreso'] ?? null;
-        $dl_salario = $_POST['salario'] ?? null;
-        $dl_auxilio = $_POST['auxilio_alimentacion'] ?? null;
-        $dl_tipo_contrato = $_POST['tipo_contrato'] ?? null;
+        // 4.3 Validar genero permitido
+        if ($genero !== 'M') {
+            if ($genero !== 'F') {
+                if ($genero !== 'OTRO') {
+                    $genero = 'M';
+                }
+            }
+        }
 
-        // 2. Insertar en tabla persona
-        $persona_data = array();
-        $persona_data['user'] = $user;
-        $persona_data['identificacion'] = $identificacion;
-        $persona_data['nombre1'] = $nombre1;
-        $persona_data['nombre2'] = $nombre2;
-        $persona_data['apellido1'] = $apellido1;
-        $persona_data['apellido2'] = $apellido2;
-        $persona_data['celular'] = $celular;
-        $persona_data['correo'] = $correo;
-        $persona_data['genero'] = $genero;
-        $persona_data['tipo_documento'] = (is_numeric($tipo_doc) ? 'CC' : $tipo_doc);
-        $persona_data['foto'] = 'img/user.png';
+        // 4.4 Validar tipo de documento permitido
+        if ($tipo_documento !== 'CC') {
+            if ($tipo_documento !== 'TI') {
+                if ($tipo_documento !== 'RC') {
+                    if ($tipo_documento !== 'CE') {
+                        if ($tipo_documento !== 'PASAPORTE') {
+                            if ($tipo_documento !== 'OTRO') {
+                                $tipo_documento = 'CC';
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-        $this->db->insert('persona', $persona_data);
-        $persona_id = $this->db->last_insert_id();
+        // 4.5 Revisar duplicados
+        $this->validar_duplicados($documento, $login, 0);
+
+        // 4.6 Clave por defecto si viene vacia
+        if ($clave_texto == '') {
+            $clave_texto = '12345';
+        }
+
+        // 4.7 Insertar persona
+        $datos_persona = array();
+        $datos_persona['tipo_documento'] = $tipo_documento;
+        $datos_persona['identificacion'] = $documento;
+        $datos_persona['user'] = $login;
+        $datos_persona['nombre1'] = $nombre1;
+        $datos_persona['nombre2'] = $nombre2;
+        $datos_persona['apellido1'] = $apellido1;
+        $datos_persona['apellido2'] = $apellido2;
+        $datos_persona['genero'] = $genero;
+        $datos_persona['celular'] = $celular;
+        $datos_persona['correo'] = $correo;
+        $datos_persona['foto'] = 'img/user.png';
+
+        $this->db->insert('persona', $datos_persona);
+        $persona_id = intval($this->db->last_insert_id());
 
         if ($this->db->error()) {
-            $r = array();
-            $r['error'] = true;
-            $r['msg'] = $this->db->error();
-            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            $respuesta = array();
+            $respuesta['error'] = true;
+            $respuesta['msg'] = $this->db->error();
+            echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
             die;
         }
 
-        // 3. Insertar en admin_usuario (permisos y roles)
-        $this->db->query("DELETE FROM admin_usuario WHERE persona_id = '$persona_id'");
-        if ($rol_id > 0) {
-            $admin_u = array();
-            $admin_u['persona_id'] = $persona_id;
-            $admin_u['rol_id'] = $rol_id;
-            $admin_u['_usuario'] = $_SESSION['usuario'] ?? 'ADMIN';
-            $admin_u['_fecha'] = date('Y-m-d H:i:s');
-            $this->db->insert('admin_usuario', $admin_u);
+        // 4.8 Insertar rol en admin_usuario (columna real: rol)
+        $datos_admin = array();
+        $datos_admin['persona_id'] = $persona_id;
+        $datos_admin['rol'] = $rol_id;
+        if (isset($_SESSION['usuario'])) {
+            $datos_admin['_usuario'] = $_SESSION['usuario'];
+        } else {
+            $datos_admin['_usuario'] = 'ADMIN';
         }
+        $datos_admin['_fecha'] = date('Y-m-d H:i:s');
+        $this->db->insert('admin_usuario', $datos_admin);
 
-        // 4. Insertar en usuario (login del sistema)
-        $this->db->query("DELETE FROM usuario WHERE persona_id = '$persona_id'");
-        $pass_hash = password_hash($clave_raw, PASSWORD_BCRYPT);
-        $u_data = array();
-        $u_data['persona_id'] = $persona_id;
-        $u_data['rol_id'] = ($rol_id > 0 ? $rol_id : 3);
-        $u_data['login'] = $user;
-        $u_data['password_hash'] = $pass_hash;
-        $u_data['activo'] = 1;
-        $this->db->insert('usuario', $u_data);
+        // 4.9 Insertar acceso en usuario
+        $datos_usuario = array();
+        $datos_usuario['persona_id'] = $persona_id;
+        $datos_usuario['rol_id'] = $rol_id;
+        $datos_usuario['login'] = $login;
+        $datos_usuario['password_hash'] = password_hash($clave_texto, PASSWORD_BCRYPT);
+        $datos_usuario['activo'] = $activo;
+        $this->db->insert('usuario', $datos_usuario);
 
-        // 5. Insertar datos laborales
-        $rol_nombre = null;
-        if ($rol_id > 0) {
-            $row_rol = $this->db->select_row("SELECT nombre FROM admin_rol WHERE id = '$rol_id'");
-            $rol_nombre = $row_rol['nombre'] ?? null;
-        }
-        $dl_fields = array();
-        $dl_fields['persona_id'] = $persona_id;
-        $dl_fields['cargo'] = $rol_nombre;
-        $dl_fields['nombre_completo'] = trim($nombre1 . ' ' . $nombre2 . ' ' . $apellido1 . ' ' . $apellido2);
-        if ($dl_fecha_ingreso !== null && $dl_fecha_ingreso !== '') {
-            $dl_fields['fecha_ingreso'] = $dl_fecha_ingreso;
-        }
-        if ($dl_salario !== null && $dl_salario !== '') {
-            $dl_fields['salario'] = str_replace(',', '.', $dl_salario);
-        }
-        if ($dl_auxilio !== null && $dl_auxilio !== '') {
-            $dl_fields['auxilio_alimentacion'] = str_replace(',', '.', $dl_auxilio);
-        }
-        if ($dl_tipo_contrato !== null && $dl_tipo_contrato !== '') {
-            $dl_fields['tipo_contrato'] = $dl_tipo_contrato;
-        }
-        $this->db->insert('datos_laborales', $dl_fields);
-
-        // 6. Bitacora
+        // 4.10 Bitacora
         insertar_bitacora(1, $_POST, "Registro agregado con exito", false);
 
-        $r = array();
-        $r['error'] = false;
-        $r['msg'] = "Registro agregado con exito";
-        $r['row'] = $this->fila(true);
-        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+        $respuesta = array();
+        $respuesta['error'] = false;
+        $respuesta['msg'] = "Registro agregado con exito";
+        $respuesta['row'] = $this->fila(true);
+        echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
     }
 
+    // 5. Modificar usuario existente
     function modificar()
     {
         if ($this->validar() == false) {
             exit(0);
         }
 
-        $pk = $this->clave_primaria;
-        $v_pk = $_POST[$pk];
+        // 5.1 Leer id y campos
+        $persona_id = intval($this->leer_post('id', '0'));
+        $tipo_documento = $this->leer_post('tipo_documento', 'CC');
+        $documento = $this->leer_post('identifica', '');
+        $nombre1 = $this->leer_post('nombre1', '');
+        $nombre2 = $this->leer_post('nombre2', '');
+        $apellido1 = $this->leer_post('apellido1', '');
+        $apellido2 = $this->leer_post('apellido2', '');
+        $genero = $this->leer_post('genero', 'M');
+        $celular = $this->leer_post('telefono', '');
+        $correo = $this->leer_post('correo', '');
+        $login = $this->leer_post('login', '');
+        $rol_id = intval($this->leer_post('rol', '3'));
+        $activo = intval($this->leer_post('activo', '1'));
+        $clave_texto = $this->leer_post('clave', '');
 
-        // 1. Extraer datos
-        $user = trim($_POST['user'] ?? '');
-        $identificacion = trim($_POST['identifica'] ?? '');
-        $nombre1 = trim($_POST['nombre1'] ?? '');
-        $nombre2 = trim($_POST['nombre2'] ?? '');
-        $apellido1 = trim($_POST['apellido1'] ?? '');
-        $apellido2 = trim($_POST['apellido2'] ?? '');
-        $celular = trim($_POST['telefono'] ?? '');
-        $correo = trim($_POST['correo'] ?? '');
-        $sexo_id = $_POST['sexo_id'] ?? '1';
-        $genero = ($sexo_id == '2' || $sexo_id == 'F') ? 'F' : 'M';
-        $tipo_doc = $_POST['tipoide'] ?? 'CC';
-        $rol_id = intval($_POST['rol'] ?? 3);
-        $clave_raw = trim($_POST['clave'] ?? '');
+        if ($rol_id < 1) {
+            $rol_id = 3;
+        }
+        if ($rol_id > 4) {
+            $rol_id = 3;
+        }
 
-        // Datos laborales
-        $dl_fecha_ingreso = $_POST['fecha_ingreso'] ?? null;
-        $dl_salario = $_POST['salario'] ?? null;
-        $dl_auxilio = $_POST['auxilio_alimentacion'] ?? null;
-        $dl_tipo_contrato = $_POST['tipo_contrato'] ?? null;
+        if ($genero !== 'M') {
+            if ($genero !== 'F') {
+                if ($genero !== 'OTRO') {
+                    $genero = 'M';
+                }
+            }
+        }
 
-        $viejos = $this->db->select_row("SELECT * FROM persona WHERE id = '$v_pk'");
+        // 5.2 Revisar duplicados excluyendo este registro
+        $this->validar_duplicados($documento, $login, $persona_id);
 
-        // 2. Actualizar persona
-        $persona_data = array();
-        $persona_data['user'] = $user;
-        $persona_data['identificacion'] = $identificacion;
-        $persona_data['nombre1'] = $nombre1;
-        $persona_data['nombre2'] = $nombre2;
-        $persona_data['apellido1'] = $apellido1;
-        $persona_data['apellido2'] = $apellido2;
-        $persona_data['celular'] = $celular;
-        $persona_data['correo'] = $correo;
-        $persona_data['genero'] = $genero;
-        $persona_data['tipo_documento'] = (is_numeric($tipo_doc) ? 'CC' : $tipo_doc);
+        // 5.3 Guardar datos viejos para bitacora
+        $datos_viejos = $this->db->select_row("SELECT * FROM persona WHERE id = " . intval($persona_id));
 
-        $this->db->update('persona', $persona_data, array('id' => $v_pk));
+        // 5.4 Actualizar persona
+        $datos_persona = array();
+        $datos_persona['tipo_documento'] = $tipo_documento;
+        $datos_persona['identificacion'] = $documento;
+        $datos_persona['user'] = $login;
+        $datos_persona['nombre1'] = $nombre1;
+        $datos_persona['nombre2'] = $nombre2;
+        $datos_persona['apellido1'] = $apellido1;
+        $datos_persona['apellido2'] = $apellido2;
+        $datos_persona['genero'] = $genero;
+        $datos_persona['celular'] = $celular;
+        $datos_persona['correo'] = $correo;
+
+        $this->db->update('persona', $datos_persona, array('id' => intval($persona_id)));
 
         if ($this->db->error()) {
-            $r = array();
-            $r['error'] = true;
-            $r['msg'] = $this->db->error();
-            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            $respuesta = array();
+            $respuesta['error'] = true;
+            $respuesta['msg'] = $this->db->error();
+            echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
             die;
         }
 
-        // 3. Actualizar admin_usuario
-        $this->db->query("DELETE FROM admin_usuario WHERE persona_id = '$v_pk'");
-        if ($rol_id > 0) {
-            $admin_u = array();
-            $admin_u['persona_id'] = $v_pk;
-            $admin_u['rol_id'] = $rol_id;
-            $admin_u['_usuario'] = $_SESSION['usuario'] ?? 'ADMIN';
-            $admin_u['_fecha'] = date('Y-m-d H:i:s');
-            $this->db->insert('admin_usuario', $admin_u);
+        // 5.5 Reemplazar rol en admin_usuario
+        $this->db->query("DELETE FROM admin_usuario WHERE persona_id = " . intval($persona_id));
+        $datos_admin = array();
+        $datos_admin['persona_id'] = $persona_id;
+        $datos_admin['rol'] = $rol_id;
+        if (isset($_SESSION['usuario'])) {
+            $datos_admin['_usuario'] = $_SESSION['usuario'];
+        } else {
+            $datos_admin['_usuario'] = 'ADMIN';
+        }
+        $datos_admin['_fecha'] = date('Y-m-d H:i:s');
+        $this->db->insert('admin_usuario', $datos_admin);
+
+        // 5.6 Actualizar o crear acceso en usuario
+        $datos_usuario = array();
+        $datos_usuario['login'] = $login;
+        $datos_usuario['rol_id'] = $rol_id;
+        $datos_usuario['activo'] = $activo;
+        if ($clave_texto !== '') {
+            $datos_usuario['password_hash'] = password_hash($clave_texto, PASSWORD_BCRYPT);
         }
 
-        // 4. Actualizar usuario
-        $u_update = array();
-        $u_update['login'] = $user;
-        $u_update['rol_id'] = ($rol_id > 0 ? $rol_id : 3);
-        if (!empty($clave_raw)) {
-            $u_update['password_hash'] = password_hash($clave_raw, PASSWORD_BCRYPT);
-        }
-        $existe_u = $this->db->select_one("SELECT COUNT(*) FROM usuario WHERE persona_id = '$v_pk'");
-        if (!empty($existe_u) && intval($existe_u) > 0) {
-            $this->db->update('usuario', $u_update, array('persona_id' => $v_pk));
-        } else {
-            $u_update['persona_id'] = $v_pk;
-            if (empty($u_update['password_hash'])) {
-                $u_update['password_hash'] = password_hash('12345', PASSWORD_BCRYPT);
+        $sql_cuenta = "SELECT COUNT(*) AS total FROM usuario WHERE persona_id = " . intval($persona_id);
+        $fila_cuenta = $this->db->select_row($sql_cuenta);
+        $existe_usuario = 0;
+        if (is_array($fila_cuenta)) {
+            if (isset($fila_cuenta['total'])) {
+                $existe_usuario = intval($fila_cuenta['total']);
             }
-            $u_update['activo'] = 1;
-            $this->db->insert('usuario', $u_update);
         }
 
-        // 5. Actualizar datos laborales
-        $rol_nombre = null;
-        if ($rol_id > 0) {
-            $row_rol = $this->db->select_row("SELECT nombre FROM admin_rol WHERE id = '$rol_id'");
-            $rol_nombre = $row_rol['nombre'] ?? null;
-        }
-        $dl_fields = array();
-        $dl_fields['cargo'] = $rol_nombre;
-        $dl_fields['nombre_completo'] = trim($nombre1 . ' ' . $nombre2 . ' ' . $apellido1 . ' ' . $apellido2);
-        if ($dl_fecha_ingreso !== null && $dl_fecha_ingreso !== '') {
-            $dl_fields['fecha_ingreso'] = $dl_fecha_ingreso;
-        }
-        if ($dl_salario !== null && $dl_salario !== '') {
-            $dl_fields['salario'] = str_replace(',', '.', $dl_salario);
-        }
-        if ($dl_auxilio !== null && $dl_auxilio !== '') {
-            $dl_fields['auxilio_alimentacion'] = str_replace(',', '.', $dl_auxilio);
-        }
-        if ($dl_tipo_contrato !== null && $dl_tipo_contrato !== '') {
-            $dl_fields['tipo_contrato'] = $dl_tipo_contrato;
-        }
-
-        $existe_dl = $this->db->select_one("SELECT COUNT(*) FROM datos_laborales WHERE persona_id = '$v_pk'");
-        if (!empty($existe_dl) && intval($existe_dl) > 0) {
-            $this->db->update('datos_laborales', $dl_fields, array('persona_id' => $v_pk));
+        if ($existe_usuario > 0) {
+            $this->db->update('usuario', $datos_usuario, array('persona_id' => intval($persona_id)));
         } else {
-            $dl_fields['persona_id'] = $v_pk;
-            $this->db->insert('datos_laborales', $dl_fields);
+            $datos_usuario['persona_id'] = $persona_id;
+            if (isset($datos_usuario['password_hash']) == false) {
+                $datos_usuario['password_hash'] = password_hash('12345', PASSWORD_BCRYPT);
+            }
+            $this->db->insert('usuario', $datos_usuario);
         }
 
-        // 6. Bitacora
-        insertar_bitacora(3, $_POST, "Registro modificado con exito", $viejos);
+        // 5.7 Bitacora
+        insertar_bitacora(3, $_POST, "Registro modificado con exito", $datos_viejos);
 
-        $r = array();
-        $r['error'] = false;
-        $r['msg'] = "Registro modificado con exito.";
-        $r['row'] = $this->fila(false);
-        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+        $respuesta = array();
+        $respuesta['error'] = false;
+        $respuesta['msg'] = "Registro modificado con exito.";
+        $respuesta['row'] = $this->fila(false);
+        echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
     }
 
+    // 6. Cargar un registro para editar
     function asignar()
     {
-        $id = intval($_GET['id'] ?? 0);
-        $sql = "SELECT p.*,
-                p.identificacion as identifica,
-                p.celular as telefono,
-                IF(p.genero = 'F', 2, 1) as sexo_id,
-                p.tipo_documento as tipoide,
-                CONCAT_WS(' ', p.nombre1, p.apellido1, p.apellido2, CONCAT('[', p.identificacion, ']')) as nombre_completo,
-                admin_usuario.rol_id as rol,
-                dl.fecha_ingreso, dl.salario, dl.auxilio_alimentacion, dl.tipo_contrato
-                FROM persona p
-                LEFT JOIN admin_usuario ON admin_usuario.persona_id = p.id
-                LEFT JOIN datos_laborales dl ON dl.persona_id = p.id
-                WHERE p.id = " . $id;
-        $rw = $this->db->select_row($sql);
-        if ($rw) {
-            $rw['id'] = urlsafe_b64encode($rw['id']);
+        // 6.1 Leer id por GET
+        if (isset($_GET['id'])) {
+            $persona_id = intval($_GET['id']);
+        } else {
+            $persona_id = 0;
         }
-        echo json_encode($rw, JSON_UNESCAPED_UNICODE);
+
+        $sql = "SELECT p.*,"
+            . " p.identificacion AS identifica,"
+            . " p.celular AS telefono,"
+            . " u.login AS login,"
+            . " u.activo AS activo,"
+            . " u.rol_id AS rol"
+            . " FROM persona p"
+            . " LEFT JOIN usuario u ON u.persona_id = p.id"
+            . " WHERE p.id = " . intval($persona_id);
+
+        $fila = $this->db->select_row($sql);
+        if (is_array($fila)) {
+            if (isset($fila['id'])) {
+                $fila['id'] = urlsafe_b64encode($fila['id']);
+            }
+        }
+        echo json_encode($fila, JSON_UNESCAPED_UNICODE);
     }
 
+    // 7. Eliminar usuario y sus accesos
     function eliminar()
     {
-        $pk = $this->clave_primaria;
-        $id = intval($_POST[$pk] ?? 0);
-        $this->db->query("DELETE FROM datos_laborales WHERE persona_id = '$id'");
-        $this->db->query("DELETE FROM admin_usuario WHERE persona_id = '$id'");
-        $this->db->query("DELETE FROM usuario WHERE persona_id = '$id'");
+        // 7.1 Leer id
+        if (isset($_POST['id'])) {
+            $persona_id = intval($_POST['id']);
+        } else {
+            $persona_id = 0;
+        }
+
+        // 7.2 Borrar tablas hijas primero (solo las que existen en el servidor)
+        $this->db->query("DELETE FROM admin_usuario WHERE persona_id = " . intval($persona_id));
+        $this->db->query("DELETE FROM usuario WHERE persona_id = " . intval($persona_id));
+
+        // 7.3 Borrar persona con metodo del padre
         parent::eliminar();
     }
 
+    // 8. SQL del listado con filtros simples
     function getSQL()
     {
-        $s = "";
+        $filtro = "";
 
-        if (isset($_GET["user"]) && $_GET["user"] != "" && $_GET["user"] != "NULL") {
-            $s .= " AND p.user LIKE '%" . str_replace(" ", "%", $this->db->escape_string($_GET['user'])) . "%' ";
-        }
-        if (isset($_GET["identifica"]) && $_GET["identifica"] != "" && $_GET["identifica"] != "NULL") {
-            $s .= " AND p.identificacion LIKE '%" . str_replace(" ", "%", $this->db->escape_string($_GET['identifica'])) . "%' ";
+        if (isset($_GET["login"])) {
+            if ($_GET["login"] != "" && $_GET["login"] != "NULL") {
+                $texto_login = $this->db->escape_string($_GET["login"]);
+                $filtro = $filtro . " AND u.login LIKE '%" . str_replace(" ", "%", $texto_login) . "%' ";
+            }
         }
 
-        $sql = "SELECT p.*,
-                p.identificacion as identifica,
-                p.celular as telefono,
-                CONCAT_WS(' ', p.nombre1, p.apellido1, p.apellido2) as nombre_completo,
-                p.id as _NUM_,
-                admin_usuario.rol_id as rol,
-                admin_rol.nombre as rol_nombre
-                FROM persona p
-                LEFT JOIN admin_usuario ON admin_usuario.persona_id = p.id
-                LEFT JOIN admin_rol ON admin_rol.id = admin_usuario.rol_id
-                WHERE 1=1 $s ORDER BY p.id ASC";
+        if (isset($_GET["identifica"])) {
+            if ($_GET["identifica"] != "" && $_GET["identifica"] != "NULL") {
+                $texto_documento = $this->db->escape_string($_GET["identifica"]);
+                $filtro = $filtro . " AND p.identificacion LIKE '%" . str_replace(" ", "%", $texto_documento) . "%' ";
+            }
+        }
+
+        if (isset($_GET["rol"])) {
+            if ($_GET["rol"] != "" && $_GET["rol"] != "NULL") {
+                $filtro = $filtro . " AND u.rol_id = " . intval($_GET["rol"]) . " ";
+            }
+        }
+
+        $sql = "SELECT p.*,"
+            . " p.identificacion AS identifica,"
+            . " p.celular AS telefono,"
+            . " CONCAT_WS(' ', p.nombre1, p.apellido1, p.apellido2) AS nombre_completo,"
+            . " p.id AS _NUM_,"
+            . " u.login AS user,"
+            . " u.activo AS activo,"
+            . " u.rol_id AS rol,"
+            . " r.nombre AS rol_nombre"
+            . " FROM persona p"
+            . " LEFT JOIN usuario u ON u.persona_id = p.id"
+            . " LEFT JOIN admin_rol r ON r.id = u.rol_id"
+            . " WHERE 1=1 " . $filtro . " ORDER BY p.id ASC";
 
         return $sql;
     }
 }
 
+// 9. Decodificar id que llega en base64 seguro
 if (isset($_POST['id'])) {
     $_POST['id'] = urlsafe_b64decode($_POST['id']);
 }
