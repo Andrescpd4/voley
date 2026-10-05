@@ -20,7 +20,7 @@
                 <div class="container-fluid">
                     <div class="row">
                         <div class="col-sm-6">
-                            <script>document.write(new Date().getFullYear())</script> &copy; Voley+
+                            <script>document.write(new Date().getFullYear())</script> &copy; Voley+ · <a href="<?php echo WEB_ROOT ?>politica-privacidad" class="text-decoration-none text-muted">Política de Privacidad</a>
                         </div>
                         <div class="col-sm-6">
                             <div class="text-sm-end d-none d-sm-block">
