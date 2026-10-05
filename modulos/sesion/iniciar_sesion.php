@@ -107,6 +107,7 @@
 
                         <div class="mt-3 text-center">
                             <p class="mb-0 text-muted">¿Problemas para acceder? Contacta a la administración.</p>
+                            <a href="<?php echo WEB_ROOT ?>modulos/sesion/privpol.php" class="text-decoration-none text-primary">Política de Privacidad</a>
                         </div>
                     </div>
                 </div>
