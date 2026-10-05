@@ -52,6 +52,15 @@ trait afiliacion_acudiente
             return;
         }
 
+        // 3.1 Un registro nuevo aun no tiene documentos: debe guardarse como borrador primero
+        if ($modo === 'enviar') {
+            $faltantes_nuevo = $this->_documentos_obligatorios_faltantes(0);
+            if (!empty($faltantes_nuevo)) {
+                $this->_error('Guarde primero como borrador y adjunte los documentos obligatorios: ' . implode(', ', $faltantes_nuevo));
+                return;
+            }
+        }
+
         // 4. Leer datos del deportista desde POST
         if (isset($_POST['dep_nombre1'])) { $dep_nombre1 = trim($_POST['dep_nombre1']); } else { $dep_nombre1 = ''; }
         if (isset($_POST['dep_nombre2'])) { $dep_nombre2 = trim($_POST['dep_nombre2']); } else { $dep_nombre2 = ''; }
@@ -271,6 +280,15 @@ trait afiliacion_acudiente
             return;
         }
 
+        // 5.1 Para enviar a revision deben estar todos los documentos obligatorios (sin rechazos)
+        if ($modo === 'enviar') {
+            $faltantes = $this->_documentos_obligatorios_faltantes($deportista_id);
+            if (!empty($faltantes)) {
+                $this->_error('Faltan documentos obligatorios o hay documentos rechazados por corregir: ' . implode(', ', $faltantes));
+                return;
+            }
+        }
+
         // 6. Leer datos del POST
         if (isset($_POST['dep_nombre1'])) { $dep_nombre1 = trim($_POST['dep_nombre1']); } else { $dep_nombre1 = ''; }
         if (isset($_POST['dep_nombre2'])) { $dep_nombre2 = trim($_POST['dep_nombre2']); } else { $dep_nombre2 = ''; }
@@ -315,9 +333,11 @@ trait afiliacion_acudiente
             }
         }
 
-        // 9. Definir nuevo estado
+        // 9. Definir nuevo estado (una solicitud devuelta sigue devuelta hasta que se reenvie)
         if ($modo === 'enviar') {
             $nuevo_estado = 'pendiente_revision';
+        } else if ($estado_actual === 'requiere_info') {
+            $nuevo_estado = 'requiere_info';
         } else {
             $nuevo_estado = 'borrador';
         }
@@ -389,10 +409,14 @@ trait afiliacion_acudiente
         // 14. Bitacora
         $this->_historiar(3, 'Actualizar afiliacion deportista', $deportista_id, 'Estado: ' . $nuevo_estado);
 
+        $respuesta = array(
+            'deportista_id' => $deportista_id,
+            'estado' => $nuevo_estado
+        );
         if ($modo === 'enviar') {
-            $this->_success('Solicitud enviada a revision correctamente');
+            $this->_success('Solicitud enviada a revision correctamente', $respuesta);
         } else {
-            $this->_success('Borrador actualizado correctamente');
+            $this->_success('Cambios guardados correctamente', $respuesta);
         }
     }
 
@@ -440,6 +464,26 @@ trait afiliacion_acudiente
         if (empty($vinculo)) {
             $this->_error('No tiene acceso a este deportista');
             return;
+        }
+
+        // 2.1 El acudiente solo adjunta en borrador o cuando el club pidio correcciones
+        if (!$this->_es_admin()) {
+            $estado_solicitud = $this->_obtener_valor(
+                "SELECT estado FROM deportista WHERE id = ?",
+                array($deportista_id)
+            );
+            if ($estado_solicitud !== 'borrador' && $estado_solicitud !== 'requiere_info') {
+                $this->_error('Solo se pueden adjuntar documentos en borrador o cuando el club solicita correcciones');
+                return;
+            }
+            $estado_doc_actual = $this->_obtener_valor(
+                "SELECT estado FROM documento WHERE deportista_id = ? AND tipo_documento_id = ? ORDER BY fecha_subida DESC LIMIT 1",
+                array($deportista_id, $tipo_doc_id)
+            );
+            if ($estado_doc_actual === 'aprobado') {
+                $this->_error('Este documento ya fue aprobado por el club y no se puede reemplazar');
+                return;
+            }
         }
 
         // 3. Verificar que el tipo_documento exista
@@ -540,14 +584,14 @@ trait afiliacion_acudiente
         // 1. Verificar documento (el admin omite el filtro por acudiente)
         if ($this->_es_admin()) {
             $doc = $this->_obtener_fila(
-                "SELECT doc.id, doc.archivo, doc.deportista_id
+                "SELECT doc.id, doc.archivo, doc.deportista_id, doc.estado
                  FROM documento doc
                  WHERE doc.id = ?",
                 array($documento_id)
             );
         } else {
             $doc = $this->_obtener_fila(
-                "SELECT doc.id, doc.archivo, doc.deportista_id
+                "SELECT doc.id, doc.archivo, doc.deportista_id, doc.estado
                  FROM documento doc
                  INNER JOIN deportista_acudiente da ON da.deportista_id = doc.deportista_id
                  WHERE doc.id = ? AND da.acudiente_id = ?",
@@ -566,6 +610,10 @@ trait afiliacion_acudiente
         );
         if ($estado !== 'borrador' && $estado !== 'requiere_info') {
             $this->_error('No se pueden eliminar documentos de solicitudes ya enviadas');
+            return;
+        }
+        if (!$this->_es_admin() && $doc['estado'] === 'aprobado') {
+            $this->_error('No se puede eliminar un documento ya aprobado por el club');
             return;
         }
 
@@ -607,6 +655,7 @@ trait afiliacion_acudiente
                            END AS porcentaje_completado,
                            d.fecha_afiliacion AS fecha_solicitud,
                            d.observaciones,
+                           d.observaciones_revision,
                            d.created_at
                     FROM deportista d
                     INNER JOIN persona p ON d.persona_id = p.id
@@ -633,6 +682,7 @@ trait afiliacion_acudiente
                            END AS porcentaje_completado,
                            d.fecha_afiliacion AS fecha_solicitud,
                            d.observaciones,
+                           d.observaciones_revision,
                            d.created_at
                     FROM deportista d
                     INNER JOIN persona p ON d.persona_id = p.id
@@ -647,6 +697,7 @@ trait afiliacion_acudiente
         $filas = array();
         for ($i = 0; $i < count($solicitudes); $i++) {
             $solicitudes[$i]['_NUM_'] = $i + 1;
+            $solicitudes[$i]['porcentaje_completado'] = $this->_calcular_progreso_afiliacion($solicitudes[$i]['deportista_id'], $solicitudes[$i]['estado']);
             $solicitudes[$i]['deportista_id_encoded'] = urlsafe_b64encode($solicitudes[$i]['deportista_id']);
             $filas[] = $solicitudes[$i];
         }
@@ -724,16 +775,8 @@ trait afiliacion_acudiente
             return;
         }
 
-        // 3. Obtener documentos del deportista
-        $documentos = $this->_consultar(
-            "SELECT doc.id, doc.archivo, doc.archivo_original, doc.estado,
-                    doc.fecha_subida, td.nombre AS tipo_nombre, td.slug AS tipo_slug
-             FROM documento doc
-             INNER JOIN tipo_documento td ON td.id = doc.tipo_documento_id
-             WHERE doc.deportista_id = ?
-             ORDER BY td.id",
-            array($deportista_id)
-        );
+        // 3. Obtener documentos del deportista (incluye los tipos que aun faltan)
+        $documentos = $this->_listar_documentos_solicitud($deportista_id);
 
         // 4. Datos del acudiente
         $acudiente = $this->_obtener_fila(
@@ -745,6 +788,7 @@ trait afiliacion_acudiente
         );
 
         $deportista['parentesco'] = $vinculo['parentesco'];
+        $deportista['porcentaje_completado'] = $this->_calcular_progreso_afiliacion($deportista_id, $deportista['estado']);
         $deportista['documentos'] = $documentos;
         $deportista['acudiente'] = $acudiente;
 
@@ -787,7 +831,7 @@ trait afiliacion_acudiente
         if ($deportista_id > 0) {
             for ($i = 0; $i < count($tipos); $i++) {
                 $doc = $this->_obtener_fila(
-                    "SELECT id, archivo, archivo_original, estado, fecha_subida
+                    "SELECT id, archivo, archivo_original, estado, observaciones, fecha_subida, fecha_revision
                      FROM documento
                      WHERE deportista_id = ? AND tipo_documento_id = ?
                      ORDER BY fecha_subida DESC LIMIT 1",

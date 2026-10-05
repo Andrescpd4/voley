@@ -6,6 +6,12 @@ $usuario_rol = isset($_SESSION['usuario_rol']) ? intval($_SESSION['usuario_rol']
 $es_admin = ($usuario_rol === 1 || $usuario_rol === 4);
 $es_acudiente = ($usuario_rol === 3);
 
+// Valor del rol admin para JavaScript (permite adjuntar documentos en cualquier estado)
+$es_admin_js = 'false';
+if ($es_admin) {
+    $es_admin_js = 'true';
+}
+
 // Obtener datos del acudiente en sesion para prellenar
 $persona_id_sesion = isset($_SESSION['persona_id']) ? intval($_SESSION['persona_id']) : 0;
 $datos_acudiente_actual = array();
@@ -21,6 +27,9 @@ if ($persona_id_sesion > 0) {
             <!-- ID oculto si se esta editando un borrador existente -->
             <input type="hidden" id="reg_deportista_id" name="deportista_id" value="0">
             <input type="hidden" id="reg_modo_guardado" name="modo_guardado" value="borrador">
+
+            <!-- Aviso de edicion: se muestra al abrir un borrador o una solicitud devuelta desde Mis Solicitudes -->
+            <div class="alert alert-warning d-none" id="reg_banner_edicion" role="status" aria-live="polite"></div>
 
             <?php if ($es_admin): ?>
             <!-- BLOQUE SOLO ADMIN: registrar a nombre de otro acudiente (pruebas y soporte) -->
@@ -283,7 +292,7 @@ if ($persona_id_sesion > 0) {
                             <i class="ri-save-line me-1"></i> Guardar Borrador
                         </button>
                         <button type="button" class="btn btn-success text-dark" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
-                            <i class="ri-send-plane-line me-1"></i> Enviar a Revision
+                            <i class="ri-send-plane-line me-1"></i> <span id="textoBtnEnviarRevision">Enviar a Revision</span>
                         </button>
                     </div>
                 </div>
@@ -331,6 +340,11 @@ var modalDocsInstancia = null;
 // Cache local: evita pedir categorias y acudientes al servidor mas de una vez
 var afiliCacheCategorias = null;
 var afiliCacheAcudientes = null;
+// Estado de la solicitud abierta en el formulario ('' cuando es un registro nuevo)
+var afiliEstadoSolicitud = '';
+// Categoria pendiente de seleccionar si el select aun no tenia opciones al cargar la solicitud
+var afiliCategoriaPendiente = '';
+var afiliEsAdminRegistro = <?php echo $es_admin_js; ?>;
 
 jQuery(document).ready(function($) {
     // 1. Inicializar modal de documentos
@@ -407,6 +421,11 @@ function afiliacionPintarCategoriasSelect(lista) {
         opt.value = item.id;
         opt.textContent = item.nombre + ' (' + item.edad_minima + '-' + item.edad_maxima + ' años)';
         select.appendChild(opt);
+    }
+    // Aplicar la categoria de una solicitud cargada antes de tener las opciones
+    if (afiliCategoriaPendiente !== '') {
+        select.value = afiliCategoriaPendiente;
+        afiliCategoriaPendiente = '';
     }
 }
 
@@ -509,18 +528,23 @@ function afiliacionGuardarRegistro(modo) {
         if (!respuesta.error) {
             afiliacionMostrarMsg(respuesta.msg, 'success');
 
-            // Si se creo uno nuevo, guardar el ID asignado para poder subir documentos
+            // Guardar el ID y el estado devueltos para seguir editando la misma solicitud
             if (respuesta.data && respuesta.data.deportista_id) {
                 document.getElementById('reg_deportista_id').value = respuesta.data.deportista_id;
+                if (respuesta.data.estado) {
+                    afiliEstadoSolicitud = respuesta.data.estado;
+                }
                 document.getElementById('btnAbrirModalDocs').disabled = false;
-                document.getElementById('textoEstadoDocs').innerHTML = '<span class="text-success fw-medium">Borrador listo. Ya puede adjuntar documentos.</span>';
+                document.getElementById('textoEstadoDocs').innerHTML = '<span class="text-success fw-medium">Solicitud guardada. Ya puede adjuntar o corregir documentos.</span>';
             }
 
-            // Si se envio a revision, sugerir pasar al historial
+            // Si se envio a revision: limpiar el formulario y llevar al historial
             if (modo === 'enviar') {
+                afiliacionLimpiarFormularioRegistro();
                 if (typeof afiliacionMisSolicitudesCargarDatos === 'function') {
                     afiliacionMisSolicitudesCargarDatos();
                 }
+                afiliacionMostrarTab('tab-mis-link');
             }
         }
     });
@@ -562,45 +586,77 @@ function afiliacionCargarListaDocumentos(deportistaId) {
     });
 }
 
-// Crear fila HTML de un tipo de documento con template backticks
+// Indicar si la solicitud abierta permite adjuntar o corregir documentos
+function afiliacionSolicitudEditable() {
+    if (afiliEsAdminRegistro) {
+        return true;
+    }
+    if (afiliEstadoSolicitud === '' || afiliEstadoSolicitud === 'borrador' || afiliEstadoSolicitud === 'requiere_info') {
+        return true;
+    }
+    return false;
+}
+
+// Crear fila HTML de un tipo de documento con su estado real (backticks)
 function afiliacionCrearFilaTipoDocumento(tipo, deportistaId) {
-    var idTipo = tipo.id;
+    var idTipo = parseInt(tipo.id) || 0;
     var nombre = afiliacionEsc(tipo.nombre);
     var obligatorio = (parseInt(tipo.obligatorio) === 1);
-    var subido = tipo.subido;
-    var badgeHtml = '';
-    var accionesHtml = '';
+    var editable = afiliacionSolicitudEditable();
+    var doc = null;
+    if (tipo.subido && tipo.documento) {
+        doc = tipo.documento;
+    }
 
-    if (subido && tipo.documento) {
-        var rutaArchivo = afiliacionEsc(tipo.documento.archivo);
-        var docId = tipo.documento.id;
-        badgeHtml = `<span class="badge bg-success text-dark"><i class="ri-check-line me-1"></i>Subido</span>`;
-        accionesHtml = `
-            <a href="${rutaArchivo}" target="_blank" class="btn btn-sm btn-outline-info btn-afili-accion" title="Ver documento" aria-label="Ver documento adjunto"><i class="ri-eye-line"></i></a>
-            <button type="button" class="btn btn-sm btn-outline-danger btn-afili-accion" onclick="afiliacionEliminarDoc(${docId}, ${deportistaId})" title="Eliminar" aria-label="Eliminar documento adjunto"><i class="ri-delete-bin-line"></i></button>
-        `;
-    } else {
-        if (obligatorio) {
-            badgeHtml = `<span class="badge bg-danger text-dark">Requerido</span>`;
-        } else {
-            badgeHtml = `<span class="badge bg-secondary">Opcional</span>`;
+    // Estado del documento y observaciones del club
+    var estadoDoc = '';
+    var obsHtml = '';
+    if (doc !== null) {
+        estadoDoc = afiliacionTexto(doc.estado, 'pendiente');
+        var obsDoc = afiliacionEsc(afiliacionTexto(doc.observaciones, ''));
+        if (obsDoc !== '') {
+            obsHtml = `<small class="d-block text-danger mt-1"><i class="ri-feedback-line me-1"></i>${obsDoc}</small>`;
         }
+    }
+    var badgeHtml = afiliacionBadgeDocumento(estadoDoc, obligatorio);
+
+    // Input oculto reutilizado para subir o reemplazar el archivo
+    var inputHtml = `<input type="file" id="input_file_${idTipo}" class="d-none" accept=".pdf,image/*" onchange="afiliacionSubirArchivoTipo(${idTipo}, ${deportistaId})">`;
+    var accionesHtml = '';
+    if (doc !== null) {
+        var rutaArchivo = afiliacionEsc(afiliacionRutaArchivo(doc.archivo));
+        var docId = parseInt(doc.id) || 0;
+        accionesHtml = `<a href="${rutaArchivo}" target="_blank" class="btn btn-sm btn-outline-info btn-afili-accion" title="Ver documento" aria-label="Ver documento ${nombre}"><i class="ri-eye-line"></i></a>`;
+        // Un documento aprobado ya no se cambia; los demas se reemplazan mientras la solicitud sea editable
+        if (editable && estadoDoc !== 'aprobado') {
+            var claseReemplazar = 'btn-outline-primary';
+            if (estadoDoc === 'rechazado') {
+                claseReemplazar = 'btn-warning';
+            }
+            accionesHtml += `
+                ${inputHtml}
+                <button type="button" class="btn btn-sm ${claseReemplazar} btn-afili-accion" onclick="document.getElementById('input_file_${idTipo}').click()" title="Reemplazar" aria-label="Reemplazar documento ${nombre}"><i class="ri-refresh-line me-1"></i>Reemplazar</button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-afili-accion" onclick="afiliacionEliminarDoc(${docId}, ${deportistaId})" title="Eliminar" aria-label="Eliminar documento ${nombre}"><i class="ri-delete-bin-line"></i></button>`;
+        }
+    } else if (editable) {
         accionesHtml = `
-            <input type="file" id="input_file_${idTipo}" class="d-none" accept=".pdf,image/*" onchange="afiliacionSubirArchivoTipo(${idTipo}, ${deportistaId})">
-            <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('input_file_${idTipo}').click()"><i class="ri-upload-cloud-line me-1"></i>Subir</button>
-        `;
+            ${inputHtml}
+            <button type="button" class="btn btn-sm btn-primary btn-afili-accion" onclick="document.getElementById('input_file_${idTipo}').click()" aria-label="Subir documento ${nombre}"><i class="ri-upload-cloud-line me-1"></i>Subir</button>`;
+    } else {
+        accionesHtml = '<small class="text-muted">No adjuntado</small>';
     }
 
     return `
-    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+    <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
         <div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center flex-wrap gap-2">
                 <h6 class="mb-0 fw-medium">${nombre}</h6>
                 ${badgeHtml}
             </div>
             <small class="text-muted">Formatos: PDF, JPG, PNG &middot; Max. 10MB</small>
+            ${obsHtml}
         </div>
-        <div class="btn-group">
+        <div class="d-flex flex-wrap gap-1">
             ${accionesHtml}
         </div>
     </div>`;
@@ -653,5 +709,124 @@ function afiliacionLimpiarFormularioRegistro() {
     document.getElementById('reg_modo_guardado').value = 'borrador';
     document.getElementById('btnAbrirModalDocs').disabled = true;
     document.getElementById('textoEstadoDocs').innerHTML = 'Debe guardar el borrador primero.';
+    document.getElementById('textoBtnEnviarRevision').textContent = 'Enviar a Revision';
+    afiliEstadoSolicitud = '';
+    afiliCategoriaPendiente = '';
+
+    // Ocultar el aviso de edicion y reactivar el selector de acudiente (solo admin)
+    var banner = document.getElementById('reg_banner_edicion');
+    banner.innerHTML = '';
+    banner.classList.add('d-none');
+    var selectOverride = document.getElementById('reg_acudiente_override');
+    if (selectOverride) {
+        selectOverride.disabled = false;
+    }
+}
+
+// Activar una pestana del modulo por el id de su boton
+function afiliacionMostrarTab(id_boton) {
+    var boton = document.getElementById(id_boton);
+    if (boton && typeof bootstrap !== 'undefined') {
+        bootstrap.Tab.getOrCreateInstance(boton).show();
+    }
+}
+
+// Asignar un valor a un campo del formulario si existe
+function afiliacionAsignarValor(id_campo, valor) {
+    var campo = document.getElementById(id_campo);
+    if (!campo) {
+        return;
+    }
+    if (valor === null || valor === undefined) {
+        campo.value = '';
+    } else {
+        campo.value = valor;
+    }
+}
+
+// Abrir una solicitud existente (borrador o devuelta) en este mismo formulario
+// Al guardar se usa actualizar_registro_acudiente, por lo que no se crea un registro nuevo
+function afiliacionCargarSolicitudEnFormulario(deportistaId) {
+    afiliacionAjax('obtener_mis_solicitud', { deportista_id: deportistaId }, function(respuesta) {
+        if (respuesta.error || !respuesta.data) {
+            return;
+        }
+        var d = respuesta.data;
+        if (d.estado !== 'borrador' && d.estado !== 'requiere_info') {
+            afiliacionMostrarMsg('Esta solicitud ya fue enviada y no se puede editar', 'warning');
+            return;
+        }
+
+        // 1. Reiniciar el formulario y guardar el id de la solicitud abierta
+        afiliacionLimpiarFormularioRegistro();
+        document.getElementById('reg_deportista_id').value = d.id;
+        afiliEstadoSolicitud = d.estado;
+
+        // 2. Datos del deportista
+        afiliacionAsignarValor('reg_dep_nombre1', d.nombre1);
+        afiliacionAsignarValor('reg_dep_nombre2', d.nombre2);
+        afiliacionAsignarValor('reg_dep_apellido1', d.apellido1);
+        afiliacionAsignarValor('reg_dep_apellido2', d.apellido2);
+        afiliacionAsignarValor('reg_dep_tipo_documento', afiliacionTexto(d.tipo_documento, 'TI'));
+        afiliacionAsignarValor('reg_dep_identificacion', d.identificacion);
+        afiliacionAsignarValor('reg_dep_fecha_nacimiento', d.fecha_nacimiento);
+        afiliacionAsignarValor('reg_dep_genero', afiliacionTexto(d.genero, 'F'));
+        afiliacionAsignarValor('reg_dep_eps', d.eps);
+        afiliacionAsignarValor('reg_dep_rh', d.rh);
+        afiliacionAsignarValor('reg_dep_alergias', d.alergias);
+        afiliacionAsignarValor('reg_dep_celular', d.celular);
+        afiliacionAsignarValor('reg_dep_correo', d.correo);
+        afiliacionAsignarValor('reg_dep_direccion', d.direccion);
+        afiliacionAsignarValor('reg_dep_contacto_nombre', d.contacto_emergencia_nombre);
+        afiliacionAsignarValor('reg_dep_contacto_telefono', d.contacto_emergencia_telefono);
+        afiliacionAsignarValor('reg_dep_observaciones', d.observaciones);
+
+        // 3. Categoria (si las opciones aun no cargan, se aplica al pintarlas)
+        var selectCategoria = document.getElementById('reg_dep_categoria_id');
+        var categoriaId = String(afiliacionTexto(d.categoria_id, ''));
+        selectCategoria.value = categoriaId;
+        if (categoriaId !== '' && selectCategoria.value !== categoriaId) {
+            afiliCategoriaPendiente = categoriaId;
+        }
+
+        // 4. Parentesco y datos de contacto del acudiente
+        var radioParentesco = document.getElementById('parentesco_' + afiliacionTexto(d.parentesco, 'padre'));
+        if (!radioParentesco) {
+            radioParentesco = document.getElementById('parentesco_otro');
+        }
+        radioParentesco.checked = true;
+        if (d.acudiente) {
+            afiliacionAsignarValor('reg_acu_celular', d.acudiente.celular);
+            afiliacionAsignarValor('reg_acu_correo', d.acudiente.correo);
+            afiliacionAsignarValor('reg_acu_direccion', d.acudiente.direccion);
+        }
+        var selectOverride = document.getElementById('reg_acudiente_override');
+        if (selectOverride) {
+            selectOverride.disabled = true;
+        }
+
+        // 5. Aviso con el estado y las observaciones del club
+        var nombreDep = afiliacionEsc(afiliacionUnirNombres(d.nombre1, d.nombre2, d.apellido1, d.apellido2));
+        var banner = document.getElementById('reg_banner_edicion');
+        var htmlBanner = '<div class="d-flex justify-content-between align-items-start flex-wrap gap-2"><div>';
+        htmlBanner += '<i class="ri-edit-box-line me-1"></i> Editando la solicitud de <strong>' + nombreDep + '</strong> ' + afiliacionBadgeEstado(d.estado);
+        if (d.estado === 'requiere_info') {
+            htmlBanner += '<div class="mt-2"><strong>El club solicita corregir:</strong> ' + afiliacionEsc(afiliacionTexto(d.observaciones_revision, 'Revise los datos y los documentos marcados como rechazados.')) + '</div>';
+        }
+        htmlBanner += '</div><button type="button" class="btn btn-sm btn-outline-secondary" onclick="afiliacionLimpiarFormularioRegistro()"><i class="ri-close-line me-1"></i>Cancelar edicion</button></div>';
+        banner.innerHTML = htmlBanner;
+        banner.classList.remove('d-none');
+
+        // 6. Habilitar documentos y ajustar el texto del boton de envio
+        document.getElementById('btnAbrirModalDocs').disabled = false;
+        document.getElementById('textoEstadoDocs').innerHTML = '<span class="fw-medium">Revise el estado de cada documento y reemplace los rechazados.</span>';
+        if (d.estado === 'requiere_info') {
+            document.getElementById('textoBtnEnviarRevision').textContent = 'Reenviar a Revision';
+        }
+
+        // 7. Mostrar la pestana de registro con el formulario cargado
+        afiliacionMostrarTab('tab-registro-link');
+        banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 }
 </script>

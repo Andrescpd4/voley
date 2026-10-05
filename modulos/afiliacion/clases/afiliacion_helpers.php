@@ -360,4 +360,93 @@ trait afiliacion_helpers
         }
         return password_hash($documento, PASSWORD_BCRYPT, array('cost' => 10));
     }
+
+    // ============================================================
+    // DOCUMENTOS Y PROGRESO DE LA AFILIACION
+    // ============================================================
+
+    // 25. Listar todos los tipos de documento activos con el documento cargado (si existe)
+    // Los tipos sin archivo salen con id nulo para poder mostrar "Falta" en la ficha
+    function _listar_documentos_solicitud($deportista_id)
+    {
+        return $this->_consultar(
+            "SELECT doc.id, doc.archivo, doc.archivo_original, doc.estado,
+                    doc.observaciones, doc.fecha_subida, doc.fecha_revision,
+                    td.id AS tipo_documento_id, td.nombre AS tipo_nombre,
+                    td.slug AS tipo_slug, td.obligatorio
+             FROM tipo_documento td
+             LEFT JOIN documento doc ON doc.tipo_documento_id = td.id AND doc.deportista_id = ?
+             WHERE td.activo = 1
+             ORDER BY td.id",
+            array(intval($deportista_id))
+        );
+    }
+
+    // 25.1 Nombres de los documentos obligatorios que faltan o fueron rechazados
+    function _documentos_obligatorios_faltantes($deportista_id)
+    {
+        $filas = $this->_consultar(
+            "SELECT td.nombre
+             FROM tipo_documento td
+             LEFT JOIN documento doc ON doc.tipo_documento_id = td.id AND doc.deportista_id = ?
+             WHERE td.activo = 1 AND td.obligatorio = 1
+               AND (doc.id IS NULL OR doc.estado = 'rechazado')
+             ORDER BY td.id",
+            array(intval($deportista_id))
+        );
+        $faltantes = array();
+        for ($i = 0; $i < count($filas); $i++) {
+            $faltantes[] = $filas[$i]['nombre'];
+        }
+        return $faltantes;
+    }
+
+    // 26. Calcular el progreso real de la afiliacion (datos + documentos obligatorios)
+    // 40% datos enviados, 40% documentos obligatorios cargados, 20% documentos aprobados
+    function _calcular_progreso_afiliacion($deportista_id, $estado)
+    {
+        if ($estado === 'aprobado' || $estado === 'activo') {
+            return 100;
+        }
+
+        // Contar documentos obligatorios, cargados (sin rechazo) y aprobados
+        $conteo = $this->_obtener_fila(
+            "SELECT COUNT(td.id) AS total,
+                    SUM(CASE WHEN doc.id IS NOT NULL AND doc.estado <> 'rechazado' THEN 1 ELSE 0 END) AS cargados,
+                    SUM(CASE WHEN doc.estado = 'aprobado' THEN 1 ELSE 0 END) AS aprobados
+             FROM tipo_documento td
+             LEFT JOIN documento doc ON doc.tipo_documento_id = td.id AND doc.deportista_id = ?
+             WHERE td.activo = 1 AND td.obligatorio = 1",
+            array(intval($deportista_id))
+        );
+
+        $total = 0;
+        $cargados = 0;
+        $aprobados = 0;
+        if (!empty($conteo)) {
+            $total = intval($conteo['total']);
+            $cargados = intval($conteo['cargados']);
+            $aprobados = intval($conteo['aprobados']);
+        }
+
+        // Datos del formulario: completos solo cuando ya se envio alguna vez a revision
+        if ($estado === 'borrador') {
+            $progreso = 20;
+        } else {
+            $progreso = 40;
+        }
+
+        // Documentos obligatorios (si no hay configurados, se considera completo)
+        if ($total > 0) {
+            $progreso = $progreso + intval(round(40 * $cargados / $total));
+            $progreso = $progreso + intval(round(20 * $aprobados / $total));
+        } else {
+            $progreso = $progreso + 60;
+        }
+
+        if ($progreso > 99) {
+            $progreso = 99;
+        }
+        return $progreso;
+    }
 }

@@ -13,6 +13,9 @@ if (!$es_acudiente && !$es_admin) {
 ?>
 
 <!-- ===== TAB 2: HISTORIAL DE SOLICITUDES DEL ACUDIENTE ===== -->
+<!-- Aviso cuando el club devolvio solicitudes para corregir -->
+<div class="alert alert-warning d-none" id="avisoSolicitudesDevueltas" role="status"></div>
+
 <div class="card border">
     <div class="card-header afili-encabezado d-flex justify-content-between align-items-center">
         <h6 class="card-title mb-0">
@@ -33,7 +36,7 @@ if (!$es_acudiente && !$es_admin) {
                         <th>Progreso</th>
                         <th>Fecha de Solicitud</th>
                         <th>Observaciones del Club</th>
-                        <th style="width: 100px;" class="text-center">Acciones</th>
+                        <th style="width: 180px;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyMisSolicitudes" aria-live="polite">
@@ -108,12 +111,32 @@ function afiliacionMisSolicitudesCargarDatos() {
             }
 
             var html = '';
+            var totalDevueltas = 0;
             for (var i = 0; i < lista.length; i++) {
                 html += afiliacionCrearFilaMiSolicitud(lista[i]);
+                if (lista[i].estado === 'requiere_info') {
+                    totalDevueltas = totalDevueltas + 1;
+                }
             }
             tbody.innerHTML = html;
+            afiliacionMostrarAvisoDevueltas(totalDevueltas);
         }
     });
+}
+
+// Mostrar u ocultar el aviso de solicitudes devueltas por el club
+function afiliacionMostrarAvisoDevueltas(total) {
+    var aviso = document.getElementById('avisoSolicitudesDevueltas');
+    if (!aviso) {
+        return;
+    }
+    if (total > 0) {
+        aviso.innerHTML = '<i class="ri-error-warning-line me-1"></i> Tiene <strong>' + total + '</strong> solicitud(es) devuelta(s) por el club. Use el boton <strong>Corregir</strong> para editar los datos o documentos y reenviarla.';
+        aviso.classList.remove('d-none');
+    } else {
+        aviso.innerHTML = '';
+        aviso.classList.add('d-none');
+    }
 }
 
 // Crear una fila de la tabla de solicitudes con backticks
@@ -122,12 +145,22 @@ function afiliacionCrearFilaMiSolicitud(item) {
     var nombre = afiliacionEsc(item.deportista_nombre);
     var badgeEstado = afiliacionBadgeEstado(item.estado);
     var barraProgreso = afiliacionBarraProgreso(item.porcentaje_completado);
-    var fecha = afiliacionEsc(item.fecha_solicitud || item.created_at || '-');
-    var obs = afiliacionEsc(item.observaciones || 'Sin observaciones');
-    var depId = item.deportista_id;
+    var fecha = afiliacionEsc(afiliacionTexto(item.fecha_solicitud, afiliacionTexto(item.created_at, '-')));
+    var obs = afiliacionEsc(afiliacionTexto(item.observaciones_revision, 'Sin observaciones'));
+    var depId = parseInt(item.deportista_id) || 0;
+
+    // Las solicitudes en borrador o devueltas se pueden abrir de nuevo en el formulario
+    var claseFila = '';
+    var botonEditar = '';
+    if (item.estado === 'requiere_info') {
+        claseFila = 'table-warning';
+        botonEditar = `<button type="button" class="btn btn-sm btn-warning btn-afili-accion" onclick="afiliacionCargarSolicitudEnFormulario(${depId})" title="Corregir y reenviar" aria-label="Corregir solicitud de ${nombre}"><i class="ri-edit-line me-1"></i>Corregir</button>`;
+    } else if (item.estado === 'borrador') {
+        botonEditar = `<button type="button" class="btn btn-sm btn-outline-primary btn-afili-accion" onclick="afiliacionCargarSolicitudEnFormulario(${depId})" title="Continuar borrador" aria-label="Continuar borrador de ${nombre}"><i class="ri-edit-line me-1"></i>Continuar</button>`;
+    }
 
     return `
-    <tr>
+    <tr class="${claseFila}">
         <td><strong>${num}</strong></td>
         <td class="fw-medium">${nombre}</td>
         <td>${badgeEstado}</td>
@@ -135,9 +168,12 @@ function afiliacionCrearFilaMiSolicitud(item) {
         <td>${fecha}</td>
         <td><small class="text-muted">${obs}</small></td>
         <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-info btn-afili-accion" onclick="afiliacionVerMiDetalle(${depId})" title="Ver ficha completa" aria-label="Ver ficha completa de ${nombre}">
-                <i class="ri-eye-line"></i> Ver
-            </button>
+            <div class="d-flex justify-content-center flex-wrap gap-1">
+                <button type="button" class="btn btn-sm btn-outline-info btn-afili-accion" onclick="afiliacionVerMiDetalle(${depId})" title="Ver ficha completa" aria-label="Ver ficha completa de ${nombre}">
+                    <i class="ri-eye-line"></i> Ver
+                </button>
+                ${botonEditar}
+            </div>
         </td>
     </tr>`;
 }

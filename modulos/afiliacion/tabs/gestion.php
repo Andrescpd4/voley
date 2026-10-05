@@ -170,6 +170,7 @@ if (!$es_admin) {
 var tablaGestionDT = null;
 var modalVerFichaInstancia = null;
 var modalCambiarEstadoInstancia = null;
+var afiliacionGestionSolicitudActual = 0;
 
 jQuery(document).ready(function($) {
     // 1. Modales
@@ -257,6 +258,7 @@ function afiliacionGestionLimpiarFiltros() {
 
 // Abrir modal de visualizacion de ficha
 function afiliacionGestionVer(id) {
+    afiliacionGestionSolicitudActual = id;
     var contenedor = document.getElementById('contenidoAdminVerFicha');
     contenedor.innerHTML = '<div class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Cargando...</span></div>';
 
@@ -279,6 +281,56 @@ function afiliacionArmarHtmlFichaAdmin(d) {
     return afiliacionArmarFichaHtml(ficha, true);
 }
 
+// Aprobar o rechazar un documento individual desde la ficha
+// El rechazo pide el motivo para que el acudiente sepa que corregir
+function afiliacionGestionRevisarDocumento(documentoId, estado) {
+    if (estado === 'rechazado') {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Rechazar documento',
+                input: 'textarea',
+                inputLabel: 'Motivo del rechazo (lo vera el acudiente)',
+                inputPlaceholder: 'Ej: El documento esta borroso o vencido...',
+                showCancelButton: true,
+                confirmButtonText: 'Rechazar',
+                cancelButtonText: 'Cancelar',
+                inputValidator: function(valor) {
+                    if (!valor || valor.trim() === '') {
+                        return 'Debe indicar el motivo del rechazo';
+                    }
+                    return null;
+                }
+            }).then(function(resultado) {
+                if (resultado.isConfirmed) {
+                    afiliacionGestionEnviarRevisionDocumento(documentoId, estado, resultado.value.trim());
+                }
+            });
+        } else {
+            var motivo = prompt('Motivo del rechazo (lo vera el acudiente):');
+            if (motivo && motivo.trim() !== '') {
+                afiliacionGestionEnviarRevisionDocumento(documentoId, estado, motivo.trim());
+            }
+        }
+        return;
+    }
+    afiliacionGestionEnviarRevisionDocumento(documentoId, estado, '');
+}
+
+// Guardar la revision del documento y refrescar la ficha y la tabla
+function afiliacionGestionEnviarRevisionDocumento(documentoId, estado, observaciones) {
+    afiliacionAjax('revisar_documento_gestion', { documento_id: documentoId, estado: estado, observaciones: observaciones }, function(respuesta) {
+        if (!respuesta.error) {
+            afiliacionMostrarMsg(respuesta.msg, 'success');
+            if (afiliacionGestionSolicitudActual > 0) {
+                afiliacionGestionVer(afiliacionGestionSolicitudActual);
+            }
+            if (tablaGestionDT) {
+                tablaGestionDT.ajax.reload(null, false);
+            }
+        }
+    });
+}
+
 // Abrir modal para cambiar estado
 function afiliacionGestionAbrirEstado(id) {
     document.getElementById('estado_solicitud_id').value = id;
@@ -296,6 +348,13 @@ function afiliacionGestionGuardarEstado() {
 
     if (!id || id === '0') {
         afiliacionMostrarMsg('ID de solicitud no valido', 'error');
+        return;
+    }
+
+    // Al devolver la solicitud el acudiente necesita saber que debe corregir
+    if (estado === 'requiere_info' && obs.trim() === '') {
+        afiliacionMostrarMsg('Indique en las observaciones que debe corregir el acudiente', 'warning');
+        document.getElementById('estado_observaciones').focus();
         return;
     }
 

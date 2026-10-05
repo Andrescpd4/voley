@@ -197,6 +197,51 @@ function afiliacionBarraProgreso(porcentaje) {
     </div>`;
 }
 
+// 6.0 Ruta publica de un archivo guardado (storage/...) relativa a la raiz web
+function afiliacionRutaArchivo(ruta) {
+    var texto = afiliacionTexto(ruta, '');
+    if (texto === '') {
+        return '';
+    }
+    if (texto.indexOf('http') === 0 || texto.charAt(0) === '/') {
+        return texto;
+    }
+    return web_root + texto;
+}
+
+// 6.1 Badge del estado de un documento (pendiente, en revision, aprobado, rechazado o faltante)
+function afiliacionBadgeDocumento(estado, obligatorio) {
+    var claseCss = 'bg-secondary';
+    var textoEstado = 'No adjuntado';
+    var icono = 'ri-file-line';
+
+    if (estado === 'pendiente') {
+        claseCss = 'bg-warning text-dark';
+        textoEstado = 'Pendiente de revision';
+        icono = 'ri-time-line';
+    } else if (estado === 'en_revision') {
+        claseCss = 'bg-info text-dark';
+        textoEstado = 'En revision';
+        icono = 'ri-search-eye-line';
+    } else if (estado === 'aprobado') {
+        claseCss = 'bg-success text-dark';
+        textoEstado = 'Aprobado';
+        icono = 'ri-check-double-line';
+    } else if (estado === 'rechazado') {
+        claseCss = 'bg-danger text-dark';
+        textoEstado = 'Rechazado - requiere correccion';
+        icono = 'ri-close-circle-line';
+    } else if (obligatorio) {
+        claseCss = 'bg-danger text-dark';
+        textoEstado = 'Falta (obligatorio)';
+        icono = 'ri-error-warning-line';
+    } else {
+        textoEstado = 'Opcional - no adjuntado';
+    }
+
+    return `<span class="badge ${claseCss}"><i class="${icono} me-1"></i>${afiliacionEsc(textoEstado)}</span>`;
+}
+
 // 7. Debounce para evitar llamadas repetidas
 function afiliacionDebounce(funcion, espera) {
     var temporizador;
@@ -281,6 +326,7 @@ function afiliacionNormalizarFicha(d) {
     ficha.celular = afiliacionTexto(d.deportista_celular, '');
     ficha.correo = afiliacionTexto(d.deportista_correo, '');
     ficha.observaciones = afiliacionTexto(d.observaciones, '');
+    ficha.observaciones_revision = afiliacionTexto(d.observaciones_revision, '');
     ficha.estado = afiliacionTexto(d.estado, '');
     ficha.fecha_solicitud = afiliacionTexto(d.fecha_solicitud, d.created_at);
 
@@ -313,24 +359,51 @@ function afiliacionNormalizarFicha(d) {
 }
 
 // 12. Armar una fila de documento para la ficha (backticks)
-function afiliacionCrearFilaDocFicha(doc) {
+// Si es_admin es true agrega los botones para aprobar o rechazar el documento
+function afiliacionCrearFilaDocFicha(doc, es_admin) {
     var tipo = afiliacionEsc(doc.tipo_nombre);
-    var archivo = afiliacionEsc(doc.archivo);
-    var original = afiliacionEsc(afiliacionTexto(doc.archivo_original, ''));
-    var estado = afiliacionEsc(afiliacionTexto(doc.estado, ''));
-    var detalleHtml = '';
-    if (original !== '') {
-        detalleHtml = `<small class="text-muted d-block">${original}</small>`;
+    var obligatorio = (parseInt(doc.obligatorio) === 1);
+    var docId = parseInt(doc.id) || 0;
+    var estado = '';
+    if (docId > 0) {
+        estado = afiliacionTexto(doc.estado, 'pendiente');
     }
+    var badgeHtml = afiliacionBadgeDocumento(estado, obligatorio);
+
+    // Nombre original del archivo y observaciones de la revision
+    var detalleHtml = '';
+    var original = afiliacionEsc(afiliacionTexto(doc.archivo_original, ''));
+    if (original !== '') {
+        detalleHtml += `<small class="text-muted d-block">${original}</small>`;
+    }
+    var obsDoc = afiliacionEsc(afiliacionTexto(doc.observaciones, ''));
+    if (obsDoc !== '') {
+        detalleHtml += `<small class="d-block text-danger"><i class="ri-feedback-line me-1"></i>${obsDoc}</small>`;
+    }
+
+    // Acciones: ver archivo y, para el admin, dictaminar el documento
+    var accionesHtml = '';
+    if (docId > 0) {
+        var archivo = afiliacionEsc(afiliacionRutaArchivo(doc.archivo));
+        accionesHtml += `<a href="${archivo}" target="_blank" class="btn btn-sm btn-primary btn-afili-accion" aria-label="Ver documento ${tipo}"><i class="ri-eye-line me-1"></i>Ver</a>`;
+        if (es_admin) {
+            accionesHtml += `
+            <button type="button" class="btn btn-sm btn-outline-success btn-afili-accion" onclick="afiliacionGestionRevisarDocumento(${docId}, 'aprobado')" title="Aprobar documento" aria-label="Aprobar documento ${tipo}"><i class="ri-check-line"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-afili-accion" onclick="afiliacionGestionRevisarDocumento(${docId}, 'rechazado')" title="Rechazar documento" aria-label="Rechazar documento ${tipo}"><i class="ri-close-line"></i></button>`;
+        }
+    }
+
     return `
-    <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
         <div>
-            <strong>${tipo}</strong>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <strong>${tipo}</strong>
+                ${badgeHtml}
+            </div>
             ${detalleHtml}
         </div>
-        <div>
-            <span class="badge bg-light text-dark me-2">${estado}</span>
-            <a href="${archivo}" target="_blank" class="btn btn-sm btn-primary btn-afili-accion" aria-label="Ver documento ${tipo}"><i class="ri-eye-line me-1"></i>Ver</a>
+        <div class="d-flex gap-1">
+            ${accionesHtml}
         </div>
     </li>`;
 }
@@ -350,6 +423,7 @@ function afiliacionArmarFichaHtml(ficha, es_admin) {
     var depAlergias = afiliacionEsc(afiliacionTexto(ficha.alergias, 'Ninguna'));
     var depContacto = afiliacionEsc(afiliacionTexto(ficha.contacto_nombre, '-') + ' (' + afiliacionTexto(ficha.contacto_tel, '-') + ')');
     var depObs = afiliacionEsc(afiliacionTexto(ficha.observaciones, 'Sin observaciones'));
+    var obsClub = afiliacionEsc(afiliacionTexto(ficha.observaciones_revision, 'Sin observaciones del club'));
     var fechaSol = afiliacionEsc(afiliacionTexto(ficha.fecha_solicitud, '-'));
     var badgeEstado = afiliacionBadgeEstado(ficha.estado);
 
@@ -382,7 +456,7 @@ function afiliacionArmarFichaHtml(ficha, es_admin) {
         docsHtml = '<li class="list-group-item text-muted">No hay documentos adjuntos a esta solicitud.</li>';
     } else {
         for (var i = 0; i < ficha.documentos.length; i++) {
-            docsHtml += afiliacionCrearFilaDocFicha(ficha.documentos[i]);
+            docsHtml += afiliacionCrearFilaDocFicha(ficha.documentos[i], es_admin);
         }
     }
 
@@ -396,15 +470,20 @@ function afiliacionArmarFichaHtml(ficha, es_admin) {
                     <h6 class="mb-0"><i class="ri-feedback-line me-1"></i> Observaciones y Dictamen Administrativo</h6>
                 </div>
                 <div class="card-body">
-                    <p class="mb-0">${depObs}</p>
+                    <p class="mb-2"><strong>Ultimo dictamen del club:</strong> ${obsClub}</p>
+                    <p class="mb-0"><strong>Observaciones del acudiente:</strong> ${depObs}</p>
                 </div>
             </div>
         </div>`;
     } else {
         bloqueFinal = `
         <div class="col-12">
-            <div class="alert alert-secondary mb-0">
+            <div class="alert alert-secondary mb-2">
                 <strong>Observaciones del Club:</strong><br>
+                ${obsClub}
+            </div>
+            <div class="alert alert-light border mb-0">
+                <strong>Mis observaciones:</strong><br>
                 ${depObs}
             </div>
         </div>`;

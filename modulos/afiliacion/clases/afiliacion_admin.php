@@ -123,7 +123,7 @@ trait afiliacion_admin
             $rw['btn_eliminar'] = '<button class="btn btn-sm btn-outline-danger btn-afili-accion accion-eliminar" onclick="afiliacionGestionEliminar(' . $id . ')" title="Eliminar" aria-label="Desactivar solicitud de afiliacion"><i class="ri-delete-bin-line"></i></button>';
 
             $rw['num'] = $num++;
-            $rw['progreso'] = $rw['porcentaje_completado'];
+            $rw['progreso'] = $this->_calcular_progreso_afiliacion($dep_id, $rw['estado']);
             $rw['id_encoded'] = urlsafe_b64encode($id);
             $data[] = $rw;
         }
@@ -172,17 +172,8 @@ trait afiliacion_admin
             return;
         }
 
-        // 2. Obtener documentos del deportista
-        $documentos = $this->_consultar(
-            "SELECT doc.id, doc.archivo, doc.archivo_original, doc.estado,
-                    doc.fecha_subida, td.nombre AS tipo_nombre, td.slug AS tipo_slug,
-                    td.obligatorio
-             FROM documento doc
-             INNER JOIN tipo_documento td ON td.id = doc.tipo_documento_id
-             WHERE doc.deportista_id = ?
-             ORDER BY td.id",
-            array($solicitud['deportista_id'])
-        );
+        // 2. Obtener documentos del deportista (incluye los tipos que aun faltan)
+        $documentos = $this->_listar_documentos_solicitud($solicitud['deportista_id']);
         $solicitud['documentos'] = $documentos;
 
         // 3. Obtener categoria
@@ -239,6 +230,19 @@ trait afiliacion_admin
             return;
         }
 
+        // Solo se aceptan los estados definidos para la afiliacion
+        $estados_validos = array('pendiente_revision', 'requiere_info', 'aprobado', 'no_aprobado', 'activo', 'inactivo');
+        if (!in_array($estado, $estados_validos, true)) {
+            $this->_error('Estado no valido');
+            return;
+        }
+
+        // Al devolver la solicitud el acudiente necesita saber que corregir
+        if ($estado === 'requiere_info' && $observaciones === '') {
+            $this->_error('Indique en las observaciones que debe corregir el acudiente');
+            return;
+        }
+
         // 1. Obtener deportista_id vinculado
         $solicitud = $this->_obtener_fila(
             "SELECT deportista_id FROM deportista_acudiente WHERE id = ?",
@@ -250,10 +254,10 @@ trait afiliacion_admin
         }
         $deportista_id = $solicitud['deportista_id'];
 
-        // 2. Preparar actualizacion
+        // 2. Preparar actualizacion (las observaciones del club van aparte de las del acudiente)
         $datos = array(
             'estado' => $estado,
-            'observaciones' => $observaciones
+            'observaciones_revision' => $observaciones
         );
 
         if ($estado === 'aprobado' || $estado === 'activo') {
@@ -281,6 +285,68 @@ trait afiliacion_admin
         $this->_historiar(3, 'Cambio estado afiliacion', $deportista_id, 'Nuevo estado: ' . $estado . ' - Obs: ' . $observaciones);
 
         $this->_success('Estado actualizado correctamente a: ' . $estado);
+    }
+
+    // 3.1 Revisar un documento individual (aprobar, rechazar o marcar en revision)
+    function revisar_documento_gestion()
+    {
+        $this->validar_token();
+
+        if (!$this->_es_admin()) {
+            $this->_error('No tiene permisos para revisar documentos');
+            return;
+        }
+
+        if (isset($_POST['documento_id'])) {
+            $documento_id = intval($_POST['documento_id']);
+        } else {
+            $documento_id = 0;
+        }
+        if (isset($_POST['estado'])) {
+            $estado = trim($_POST['estado']);
+        } else {
+            $estado = '';
+        }
+        if (isset($_POST['observaciones'])) {
+            $observaciones = trim($_POST['observaciones']);
+        } else {
+            $observaciones = '';
+        }
+
+        if ($documento_id <= 0) {
+            $this->_error('ID de documento invalido');
+            return;
+        }
+
+        // 1. Validar estado permitido para documentos
+        $estados_validos = array('pendiente', 'en_revision', 'aprobado', 'rechazado');
+        if (!in_array($estado, $estados_validos, true)) {
+            $this->_error('Estado de documento no valido');
+            return;
+        }
+        if ($estado === 'rechazado' && $observaciones === '') {
+            $this->_error('Indique el motivo del rechazo para que el acudiente pueda corregirlo');
+            return;
+        }
+
+        // 2. Verificar que el documento exista
+        $doc = $this->_obtener_fila(
+            "SELECT id, deportista_id FROM documento WHERE id = ?",
+            array($documento_id)
+        );
+        if (empty($doc)) {
+            $this->_error('Documento no encontrado');
+            return;
+        }
+
+        // 3. Guardar revision
+        $this->_ejecutar(
+            "UPDATE documento SET estado = ?, observaciones = ?, revisado_por = ?, fecha_revision = ? WHERE id = ?",
+            array($estado, $observaciones, $this->_obtener_usuario_id(), date('Y-m-d H:i:s'), $documento_id)
+        );
+
+        $this->_historiar(3, 'Revision documento afiliacion', $doc['deportista_id'], 'Documento: ' . $documento_id . ' - Estado: ' . $estado);
+        $this->_success('Documento marcado como: ' . $estado);
     }
 
     // 4. Eliminar solicitud (cambiar estado a inactivo)

@@ -7,17 +7,18 @@
 DELETE FROM `admin_permiso_accion` WHERE `accion` IN (SELECT `id` FROM `admin_accion` WHERE `menu` = 'afiliacion' AND `id` != 47);
 DELETE FROM `admin_accion` WHERE `menu` = 'afiliacion' AND `id` != 47;
 
--- 2. INSERTAR NUEVAS ACCIONES (IDs 55-68)
+-- 2. INSERTAR NUEVAS ACCIONES (IDs 55-69)
 -- Tab 3: Administracion (Admin - roles 1, 4)
 INSERT INTO `admin_accion` (`id`, `menu`, `accion`, `tipo_accion`, `archivo`, `requiere_permiso`, `descripcion`, `orden`, `fecha`) VALUES
 (55, 'afiliacion', 'listar_gestion', 'json', 'acciones.php', 'S', 'Listar solicitudes para DataTable admin', 10, NOW()),
 (56, 'afiliacion', 'asignar_gestion', 'json', 'acciones.php', 'S', 'Obtener detalle solicitud para modal Ver', 20, NOW()),
 (57, 'afiliacion', 'modificar_gestion', 'json', 'acciones.php', 'S', 'Cambiar estado + observaciones admin', 30, NOW()),
 (58, 'afiliacion', 'eliminar_gestion', 'json', 'acciones.php', 'S', 'Eliminar solicitud (soft delete)', 40, NOW()),
+(69, 'afiliacion', 'revisar_documento_gestion', 'json', 'acciones.php', 'S', 'Aprobar / rechazar documento individual', 45, NOW()),
 
 -- Tab 1: Registro (Acudiente - rol 3)
 (59, 'afiliacion', 'crear_registro_acudiente', 'json', 'acciones.php', 'S', 'Crear persona + deportista + acudiente + docs', 50, NOW()),
-(60, 'afiliacion', 'actualizar_registro_acudiente', 'json', 'acciones.php', 'S', 'Editar borrador existente', 60, NOW()),
+(60, 'afiliacion', 'actualizar_registro_acudiente', 'json', 'acciones.php', 'S', 'Editar borrador o solicitud devuelta', 60, NOW()),
 (61, 'afiliacion', 'subir_documento_acudiente', 'json', 'acciones.php', 'S', 'Subir documento por tipo_documento', 70, NOW()),
 (62, 'afiliacion', 'eliminar_documento_acudiente', 'json', 'acciones.php', 'S', 'Eliminar documento propio', 80, NOW()),
 
@@ -36,14 +37,16 @@ INSERT IGNORE INTO `admin_permiso_accion` (`rol`, `accion`) VALUES
 (1, 55), (1, 56), (1, 57), (1, 58),
 (1, 59), (1, 60), (1, 61), (1, 62),
 (1, 63), (1, 64),
-(1, 65), (1, 66), (1, 67), (1, 68);
+(1, 65), (1, 66), (1, 67), (1, 68),
+(1, 69);
 
 -- 4. PERMISOS ROL 4 (SuperAdmin) - TODAS las acciones
 INSERT IGNORE INTO `admin_permiso_accion` (`rol`, `accion`) VALUES
 (4, 55), (4, 56), (4, 57), (4, 58),
 (4, 59), (4, 60), (4, 61), (4, 62),
 (4, 63), (4, 64),
-(4, 65), (4, 66), (4, 67), (4, 68);
+(4, 65), (4, 66), (4, 67), (4, 68),
+(4, 69);
 
 -- 5. PERMISOS ROL 3 (Acudiente) - Sus tabs + compartidas
 INSERT IGNORE INTO `admin_permiso_accion` (`rol`, `accion`) VALUES

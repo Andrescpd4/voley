@@ -6,6 +6,9 @@
 -- Asegurar columna observaciones en deportista
 ALTER TABLE `deportista` ADD COLUMN IF NOT EXISTS `observaciones` TEXT DEFAULT NULL AFTER `fecha_afiliacion`;
 
+-- Observaciones del club al revisar (separadas de las observaciones que escribe el acudiente)
+ALTER TABLE `deportista` ADD COLUMN IF NOT EXISTS `observaciones_revision` TEXT DEFAULT NULL AFTER `observaciones`;
+
 -- Vista v_deportista: deportistas con datos completos de persona
 CREATE OR REPLACE VIEW `v_deportista` AS
 SELECT 
@@ -70,6 +73,7 @@ SELECT
     d.`fecha_afiliacion` AS `fecha_solicitud`,
     d.`fecha_afiliacion` AS `fecha_aprobacion`,
     d.`observaciones` AS `observaciones`,
+    d.`observaciones_revision` AS `observaciones_revision`,
     -- Datos deportista
     pd.`tipo_documento` AS `deportista_tipo_documento`,
     pd.`identificacion` AS `deportista_identificacion`,

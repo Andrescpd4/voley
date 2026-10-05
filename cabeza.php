@@ -148,6 +148,10 @@
                         <img src="<?php echo WEB_ROOT ?>img/logo-sm.png" alt="" height="57">
                     </span>
                 </a>
+                <!-- Boton requerido por app.js de Velzon para registrar el evento del menu hamburguesa -->
+                <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover" aria-label="Fijar menu lateral">
+                    <i class="ri-record-circle-line"></i>
+                </button>
             </div>
 
             <div id="scrollbar">
@@ -166,6 +170,22 @@
         </div>
         <!-- Left Sidebar End -->
         <div class="vertical-overlay"></div>
+
+        <!-- Modal requerido por app.js de Velzon (notificaciones); sin el, app.js se detiene y no inicializa tooltips ni el ajuste al redimensionar -->
+        <div id="removeNotificationModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" id="NotificationModalbtn-close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p class="text-muted mb-3">Desea eliminar las notificaciones seleccionadas?</p>
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" id="delete-notification">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- ============================================================== -->
         <!-- Start right Content here -->
