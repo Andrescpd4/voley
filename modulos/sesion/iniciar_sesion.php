@@ -222,15 +222,12 @@
             var nombre_politica = datos_login.politica_nombre || 'Política de Privacidad';
             var url_destino = datos_login.redirect || (web_root + 'inicio');
 
-            var contenido_html = `<div class="text-start">
-                <p class="mb-2">Para ingresar a Voley+ debes leer y aceptar nuestra <strong>${nombre_politica} (Versión ${version_politica})</strong>.</p>
-                <p class="text-muted small mb-3">Tu consentimiento nos permite gestionar las fichas deportivas, registros de asistencia y comunicaciones de forma legal y segura.</p>
-                <div class="p-2 border rounded bg-light text-center mb-3">
-                    <a href="${url_politica}" target="_blank" class="btn btn-sm btn-outline-primary">
-                        <i class="ri-external-link-line me-1"></i> Abrir y leer política completa
-                    </a>
-                </div>
-                <p class="text-muted small mb-0">Si rechazas los términos no podrás acceder a la plataforma.</p>
+            var contenido_html = `<div class="text-black">
+                <p class="mb-2">Para ingresar a Voley+ debes leer y aceptar el documento vigente.</p>
+                <p class="mb-3"><span class="badge bg-primary text-white">Versión ${version_politica}</span></p>
+                <a href="${url_politica}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="ri-external-link-line me-1"></i> Abrir y leer documento completo
+                </a>
             </div>`;
 
             Swal.fire({
@@ -241,7 +238,7 @@
                 confirmButtonText: '<i class="ri-check-line me-1"></i> Acepto la política',
                 cancelButtonText: '<i class="ri-close-line me-1"></i> Rechazar y salir',
                 confirmButtonColor: '#405189',
-                cancelButtonColor: '#f06548',
+                cancelButtonColor: '#405189',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 focusConfirm: true
