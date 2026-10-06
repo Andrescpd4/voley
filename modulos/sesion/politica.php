@@ -13,7 +13,7 @@
 global $db;
 
 // 1. Consultar la politica vigente desde la base de datos
-$sql_politica = "SELECT id, nombre, contenido, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1 LIMIT 1";
+$sql_politica = "SELECT id, nombre, contenido, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
 $datos_politica = $db->select_row($sql_politica);
 
 $titulo_politica = 'Política de Privacidad y Tratamiento de Datos Personales';
@@ -60,7 +60,7 @@ if (function_exists('is_login')) {
         if (isset($_SESSION['persona_id'])) {
             $persona_id_logueado = intval($_SESSION['persona_id']);
             if ($persona_id_logueado > 0 && $tipo_id_politica > 0) {
-                $sql_firma_check = "SELECT id, fecha_firma FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_logueado . " AND tipo_autorizacion_id = " . $tipo_id_politica . " AND version_firmada = '" . $db->escape_string($version_politica) . "' AND aceptada = 1 LIMIT 1";
+                $sql_firma_check = "SELECT id, fecha_firma FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_logueado . " AND tipo_autorizacion_id = " . $tipo_id_politica . " AND version_firmada = '" . $db->escape_string($version_politica) . "' AND aceptada = 1";
                 $firma_check = $db->select_row($sql_firma_check);
                 if (is_array($firma_check)) {
                     if (isset($firma_check['id'])) {
@@ -158,7 +158,6 @@ if (function_exists('is_login')) {
                                 <i class="ri-arrow-left-line me-1"></i> Volver al inicio de sesión
                             </a>
                         </div>
-                    <
                 </div>
 
                 <!-- Pie de pagina exterior -->

@@ -26,13 +26,13 @@ if (is_login()) {
         }
 
         if ($persona_id_actual > 0) {
-            $sql_pol = "SELECT id, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1 LIMIT 1";
+            $sql_pol = "SELECT id, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
             $tipo_pol = $db->select_row($sql_pol);
 
             if (is_array($tipo_pol) && isset($tipo_pol['id'])) {
                 $tipo_id_pol = intval($tipo_pol['id']);
                 $version_pol = $tipo_pol['version'];
-                $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_actual . " AND tipo_autorizacion_id = " . $tipo_id_pol . " AND version_firmada = '" . $db->escape_string($version_pol) . "' AND aceptada = 1 LIMIT 1";
+                $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_actual . " AND tipo_autorizacion_id = " . $tipo_id_pol . " AND version_firmada = '" . $db->escape_string($version_pol) . "' AND aceptada = 1";
                 $firma_pol = $db->select_row($sql_firma);
 
                 $tiene_firma_vigente = false;

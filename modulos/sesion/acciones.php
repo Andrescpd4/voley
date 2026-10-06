@@ -48,7 +48,7 @@ class Sesion extends clase_base
     function verificar_politica_pendiente($persona_id)
     {
         $id_limpio = intval($persona_id);
-        $sql_tipo = "SELECT id, nombre, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1 LIMIT 1";
+        $sql_tipo = "SELECT id, nombre, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
         $tipo = $this->db->select_row($sql_tipo);
 
         if (!is_array($tipo)) {
@@ -63,7 +63,7 @@ class Sesion extends clase_base
         $nombre_doc = $tipo['nombre'];
 
         // Buscar firma vigente aceptada
-        $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $id_limpio . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "' AND aceptada = 1 LIMIT 1";
+        $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $id_limpio . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "' AND aceptada = 1";
         $firma = $this->db->select_row($sql_firma);
 
         if (is_array($firma)) {
@@ -242,7 +242,7 @@ class Sesion extends clase_base
         $persona_id = intval($_SESSION['persona_id']);
 
         // 4.1 Buscar politica vigente
-        $sql_tipo = "SELECT id, nombre, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1 LIMIT 1";
+        $sql_tipo = "SELECT id, nombre, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
         $tipo = $this->db->select_row($sql_tipo);
 
         if (!is_array($tipo) || !isset($tipo['id'])) {
@@ -295,7 +295,7 @@ class Sesion extends clase_base
         $firma_json = json_encode($evidencia_array, JSON_UNESCAPED_UNICODE);
 
         // 4.2 Revisar si ya existe registro para esta persona, tipo y version
-        $sql_existe = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "' LIMIT 1";
+        $sql_existe = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "'";
         $fila_existe = $this->db->select_row($sql_existe);
 
         if (is_array($fila_existe) && isset($fila_existe['id'])) {
@@ -332,7 +332,7 @@ class Sesion extends clase_base
         if (isset($_SESSION['persona_id'])) {
             $persona_id = intval($_SESSION['persona_id']);
 
-            $sql_tipo = "SELECT id, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1 LIMIT 1";
+            $sql_tipo = "SELECT id, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
             $tipo = $this->db->select_row($sql_tipo);
 
             if (is_array($tipo) && isset($tipo['id'])) {
@@ -369,7 +369,7 @@ class Sesion extends clase_base
                 $firma_json = json_encode($evidencia_array, JSON_UNESCAPED_UNICODE);
 
                 // Guardar constancia de rechazo para auditoria
-                $sql_existe = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "' LIMIT 1";
+                $sql_existe = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "'";
                 $fila_existe = $this->db->select_row($sql_existe);
 
                 if (is_array($fila_existe) && isset($fila_existe['id'])) {
