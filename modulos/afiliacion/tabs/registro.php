@@ -15,12 +15,18 @@ if ($persona_id_sesion > 0) {
 ?>
 
 <style>
-    canvas#signature {
-        border: 2px solid black;
+    /* Firma del acudiente: recuadro punteado estilo libreta */
+    .afili-firma-marco {
+        border: 2px dashed #adb5bd;
+        border-radius: 8px;
+        background-color: #ffffff;
+        touch-action: none;
     }
-
-    form>* {
-        margin: 10px;
+    #firmaCanvas {
+        width: 100%;
+        height: 180px;
+        display: block;
+        cursor: crosshair;
     }
 </style>
 
@@ -281,18 +287,33 @@ if ($persona_id_sesion > 0) {
             </div>
 
             <!-- ============================================================ -->
-            <!-- FIRMA                                                        -->
+            <!-- FIRMA DEL ACUDIENTE (padre, madre o representante)      -->
+            <!-- Una sola firma que respalda todos los documentos.      -->
+            <!-- Viaja dentro del FormData principal (sin form aparte). -->
             <!-- ============================================================ -->
-            
-            <form action="submit.php" onsubmit="return onSubmit(this)" method="post">
-                <div>
-                    <canvas id="signature" width="300" height="100"></canvas>
+            <div class="card mb-3 border">
+                <div class="card-header afili-encabezado-oscuro">
+                    <h6 class="card-title mb-0">
+                        <i class="ri-pen-nib-line me-1"></i> Firma del Acudiente
+                    </h6>
                 </div>
-                <div>
-                    <input type="hidden" name="signature" />
+                <div class="card-body">
+                    <p class="text-muted small mb-2">
+                        Con su firma usted acepta el tratamiento de datos, las políticas del club
+                        y los demás documentos obligatorios. Dibuje con el dedo o el mouse.
+                    </p>
+                    <div class="afili-firma-marco">
+                        <canvas id="firmaCanvas"></canvas>
+                    </div>
+                    <input type="hidden" id="firmaImagenData" name="firma_imagen_data" value="">
+                    <div class="d-flex gap-2 mt-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="afiliacionFirmaLimpiar()">
+                            <i class="ri-eraser-line me-1"></i> Borrar y firmar de nuevo
+                        </button>
+                        <span class="text-muted small align-self-center">Solo se pide al Enviar a Revisión. El borrador no la necesita.</span>
+                    </div>
                 </div>
-                <button type="submit">Aceptar y Enviar</button>
-            </form>
+            </div>
 
                     <!-- ============================================================ -->
                     <!-- BOTONES DE ACCION: GUARDAR BORRADOR / ENVIAR                 -->
@@ -371,6 +392,9 @@ if ($persona_id_sesion > 0) {
         if (selectOverride) {
             afiliacionCargarAcudientesOverride();
         }
+
+        // 4. Preparar el canvas de firma del acudiente
+        afiliacionFirmaIniciar();
     });
 
     // Cargar acudientes para el select solo-admin (usa cache si ya se pidio antes)
@@ -536,6 +560,12 @@ if ($persona_id_sesion > 0) {
                 afiliacionMostrarMsg('Por favor complete los campos marcados en rojo antes de enviar a revision', 'warning');
                 return;
             }
+            // La firma del acudiente es obligatoria solo al enviar
+            var firma_lista = afiliacionFirmaGuardarEnCampo();
+            if (!firma_lista) {
+                afiliacionMostrarMsg('Debe dibujar su firma en el recuadro antes de enviar a revisión', 'warning');
+                return;
+            }
         }
 
         var formData = new FormData(form);
@@ -693,10 +723,156 @@ if ($persona_id_sesion > 0) {
         });
     }
 
+    // ============================================================
+    // FIRMA DEL ACUDIENTE (canvas local del tab, sin archivos aparte)
+    // ============================================================
+    var afiliFirmaDibujando = false;
+    var afiliFirmaPrevioX = 0;
+    var afiliFirmaPrevioY = 0;
+    var afiliFirmaTrazo = false;
+
+    // Preparar el canvas: tamano real, eventos de mouse y tactil
+    function afiliacionFirmaIniciar() {
+        var canvas = document.getElementById('firmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        afiliacionFirmaAjustar(canvas);
+
+        canvas.addEventListener('mousedown', afiliacionFirmaEmpezar);
+        canvas.addEventListener('mousemove', afiliacionFirmaMover);
+        canvas.addEventListener('mouseup', afiliacionFirmaTerminar);
+        canvas.addEventListener('mouseleave', afiliacionFirmaTerminar);
+        canvas.addEventListener('touchstart', afiliacionFirmaEmpezar, { passive: false });
+        canvas.addEventListener('touchmove', afiliacionFirmaMover, { passive: false });
+        canvas.addEventListener('touchend', afiliacionFirmaTerminar);
+
+        window.addEventListener('resize', function() {
+            afiliacionFirmaAjustar(canvas);
+        });
+    }
+
+    // Ajustar el canvas al ancho visible con nitidez en pantallas HD
+    function afiliacionFirmaAjustar(canvas) {
+        var escala = 1;
+        if (window.devicePixelRatio && window.devicePixelRatio > 1) {
+            escala = window.devicePixelRatio;
+        }
+        var ancho_css = canvas.clientWidth;
+        var alto_css = 180;
+        if (ancho_css <= 0) {
+            ancho_css = 300;
+        }
+        canvas.width = ancho_css * escala;
+        canvas.height = alto_css * escala;
+        var ctx = canvas.getContext('2d');
+        ctx.scale(escala, escala);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#212529';
+    }
+
+    // Punto donde empieza el trazo (sirve para mouse y dedo)
+    function afiliacionFirmaPunto(evento, canvas) {
+        var rect = canvas.getBoundingClientRect();
+        var punto_x = 0;
+        var punto_y = 0;
+        if (evento.touches && evento.touches.length > 0) {
+            punto_x = evento.touches[0].clientX - rect.left;
+            punto_y = evento.touches[0].clientY - rect.top;
+        } else {
+            punto_x = evento.clientX - rect.left;
+            punto_y = evento.clientY - rect.top;
+        }
+        return { x: punto_x, y: punto_y };
+    }
+
+    // Empezar a dibujar
+    function afiliacionFirmaEmpezar(evento) {
+        var canvas = document.getElementById('firmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        if (evento.cancelable) {
+            evento.preventDefault();
+        }
+        afiliFirmaDibujando = true;
+        var punto = afiliacionFirmaPunto(evento, canvas);
+        afiliFirmaPrevioX = punto.x;
+        afiliFirmaPrevioY = punto.y;
+    }
+
+    // Seguir el trazo mientras se mueve
+    function afiliacionFirmaMover(evento) {
+        if (!afiliFirmaDibujando) {
+            return;
+        }
+        var canvas = document.getElementById('firmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        if (evento.cancelable) {
+            evento.preventDefault();
+        }
+        var punto = afiliacionFirmaPunto(evento, canvas);
+        var ctx = canvas.getContext('2d');
+        ctx.beginPath();
+        ctx.moveTo(afiliFirmaPrevioX, afiliFirmaPrevioY);
+        ctx.lineTo(punto.x, punto.y);
+        ctx.stroke();
+        afiliFirmaPrevioX = punto.x;
+        afiliFirmaPrevioY = punto.y;
+        afiliFirmaTrazo = true;
+    }
+
+    // Soltar el lapiz
+    function afiliacionFirmaTerminar() {
+        afiliFirmaDibujando = false;
+    }
+
+    // Borrar el canvas por completo
+    function afiliacionFirmaLimpiar() {
+        var canvas = document.getElementById('firmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        afiliFirmaTrazo = false;
+        var campo = document.getElementById('firmaImagenData');
+        if (campo) {
+            campo.value = '';
+        }
+    }
+
+    // Revisar si el canvas esta vacio (sin ningun trazo)
+    function afiliacionFirmaVacia() {
+        if (afiliFirmaTrazo) {
+            return false;
+        }
+        return true;
+    }
+
+    // Copiar la imagen del canvas al campo oculto antes de enviar
+    function afiliacionFirmaGuardarEnCampo() {
+        var canvas = document.getElementById('firmaCanvas');
+        var campo = document.getElementById('firmaImagenData');
+        if (!canvas || !campo) {
+            return false;
+        }
+        if (afiliacionFirmaVacia()) {
+            campo.value = '';
+            return false;
+        }
+        campo.value = canvas.toDataURL('image/png');
+        return true;
+    }
+
     // Limpiar formulario completo para un nuevo registro
     function afiliacionLimpiarFormularioRegistro() {
         document.getElementById('formRegistroAfiliacion').reset();
         afiliacionLimpiarErrores();
+        afiliacionFirmaLimpiar();
         document.getElementById('reg_deportista_id').value = '0';
         document.getElementById('reg_modo_guardado').value = 'borrador';
         document.getElementById('btnAbrirModalDocs').disabled = true;

@@ -52,7 +52,6 @@
     </script>
 
     <!-- JAVASCRIPT -->
-    <script src="<?php echo WEB_ROOT ?>js/firma/firma.js"></script>
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/simplebar/simplebar.min.js"></script>
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/node-waves/waves.min.js"></script>

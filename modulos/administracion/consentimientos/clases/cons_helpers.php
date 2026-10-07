@@ -184,6 +184,7 @@ class ConsentimientosHelpers
                     af.fecha_firma,
                     af.aceptada,
                     af.version_firmada,
+                    af.firma_imagen,
                     ta.nombre AS tipo_nombre,
                     ta.slug AS tipo_slug,
                     ta.clase AS tipo_clase,

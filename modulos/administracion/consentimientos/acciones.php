@@ -411,6 +411,92 @@ class Consentimientos extends Base
         echo json_encode($res, JSON_UNESCAPED_UNICODE);
     }
 
+    // 14. Ver la imagen de una firma (solo con permiso ver_firma)
+    // Devuelve dataURL en JSON: el PNG nunca tiene URL directa.
+    function ver_firma()
+    {
+        $this->validar_token_simple();
+
+        if (isset($_POST['id'])) {
+            $firma_id = intval($_POST['id']);
+        } else {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'ID requerido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        if ($firma_id <= 0) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'ID no válido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $sql_firma = "SELECT firma_imagen FROM autorizacion_firmada WHERE id = " . $firma_id;
+        $fila = $this->db->select_row($sql_firma);
+
+        if (!is_array($fila)) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Firma no encontrada.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        if (!isset($fila['firma_imagen'])) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Esta firma no tiene imagen guardada.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $ruta_guardada = $fila['firma_imagen'];
+        if ($ruta_guardada === '' || $ruta_guardada === null) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Esta firma no tiene imagen guardada.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Solo permitir archivos dentro de storage/firmas/ con extension png
+        $nombre_base = basename($ruta_guardada);
+        if (substr($nombre_base, -4) !== '.png') {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Archivo de firma no válido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $ruta_real = 'storage/firmas/' . $nombre_base;
+        if (!file_exists($ruta_real)) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Archivo de firma no encontrado.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $binario = file_get_contents($ruta_real);
+        if ($binario === false) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'No se pudo leer la firma.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        insertar_bitacora(3, 'Firma visualizada', 'ID firma: ' . $firma_id);
+
+        $r = array();
+        $r['error'] = false;
+        $r['data_url'] = 'data:image/png;base64,' . base64_encode($binario);
+        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+    }
+
     // 13. Mantener compatibilidad: rechazar_politica (guarda rechazo y expulsa)
     function rechazar_politica()
     {

@@ -53,11 +53,12 @@
                         <th>Documento</th>
                         <th>Versión</th>
                         <th>Decisión</th>
+                        <th style="width: 90px;" class="text-center">Firma</th>
                     </tr>
                 </thead>
                 <tbody id="consHistCuerpo" aria-live="polite">
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">
+                        <td colspan="6" class="text-center py-4 text-muted">
                             <span class="spinner-border spinner-border-sm text-primary"></span>
                             <span class="ms-2">Cargando historial...</span>
                         </td>
@@ -96,7 +97,7 @@ function consHistCargar() {
     if (!cuerpo) {
         return;
     }
-    cuerpo.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Buscando firmas...</span></td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Buscando firmas...</span></td></tr>';
 
     var datos = {};
     var tipoSel = document.getElementById('consHistTipo').value;
@@ -118,7 +119,7 @@ function consHistCargar() {
         }
         var lista = respuesta.data;
         if (!lista || lista.length === 0) {
-            cuerpo.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No se encontraron firmas con esos filtros.</td></tr>';
+            cuerpo.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron firmas con esos filtros.</td></tr>';
             return;
         }
         var html = '';
@@ -137,11 +138,20 @@ function consHistCrearFila(item) {
     var tipoNombre = consEsc(item.tipo_nombre);
     var version = consEsc(item.version_firmada);
     var badgeClase = consBadgeClase(item.tipo_clase);
+    var firmaId = parseInt(item.id);
     var decision = 'Aceptada';
     var badgeDecision = '<span class="badge bg-success-subtle text-success">Aceptada</span>';
     if (parseInt(item.aceptada) !== 1) {
         decision = 'Rechazada';
         badgeDecision = '<span class="badge bg-danger-subtle text-danger">Rechazada</span>';
+    }
+
+    // Boton de firma solo si hay imagen; el permiso lo controla accion-ver_firma
+    var celdaFirma = '<span class="text-muted small">Sin imagen</span>';
+    if (item.firma_imagen && item.firma_imagen !== '') {
+        celdaFirma = `<button type="button" class="btn btn-sm btn-outline-secondary accion-ver_firma" onclick="consHistVerFirma(${firmaId})" title="Ver firma manuscrita">
+            <i class="ri-pen-nib-line"></i> Ver
+        </button>`;
     }
 
     return `
@@ -157,6 +167,7 @@ function consHistCrearFila(item) {
         </td>
         <td>${version}</td>
         <td>${badgeDecision}<span class="d-none">${decision}</span></td>
+        <td class="text-center">${celdaFirma}</td>
     </tr>`;
 }
 
@@ -167,4 +178,47 @@ function consHistLimpiar() {
     document.getElementById('consHistEstado').value = '';
     consHistCargar();
 }
+
+// Ver la firma manuscrita en un modal (requiere permiso ver_firma)
+function consHistVerFirma(firmaId) {
+    var imagen = document.getElementById('consFirmaImagen');
+    imagen.removeAttribute('src');
+    imagen.alt = 'Cargando firma...';
+    var modalElemento = document.getElementById('consFirmaModal');
+    var modalInstancia = bootstrap.Modal.getOrCreateInstance(modalElemento);
+    modalInstancia.show();
+
+    consAjax('ver_firma', { id: firmaId }, function(respuesta) {
+        if (respuesta.error) {
+            return;
+        }
+        if (respuesta.data_url) {
+            imagen.src = respuesta.data_url;
+            imagen.alt = 'Firma manuscrita del acudiente';
+        }
+    });
+}
 </script>
+
+<!-- ============================================================ -->
+<!-- MODAL: VER FIRMA MANUSCRITA                                  -->
+<!-- ============================================================ -->
+<div class="modal fade accion-ver_firma" id="consFirmaModal" tabindex="-1" aria-labelledby="consFirmaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="consFirmaModalLabel">
+                    <i class="ri-pen-nib-line me-1"></i> Firma del acudiente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="consFirmaImagen" class="img-fluid border rounded bg-white" alt="Firma manuscrita del acudiente">
+                <p class="text-muted small mt-2 mb-0">Documento sensible: su acceso queda registrado en bitácora.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>

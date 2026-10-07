@@ -360,4 +360,144 @@ trait afiliacion_helpers
         }
         return password_hash($documento, PASSWORD_BCRYPT, array('cost' => 10));
     }
+
+    // ============================================================
+    // FIRMA DEL ACUDIENTE (dato sensible: PNG sin URL directa)
+    // ============================================================
+
+    // 25. Guardar la imagen PNG de la firma en storage/firmas/
+    // Devuelve array(ok, msg, ruta). La ruta es relativa: storage/firmas/xxx.png
+    function guardar_firma_acudiente($persona_id_acudiente, $data_url)
+    {
+        $id_acudiente = intval($persona_id_acudiente);
+
+        // 1. Validar prefijo del dataURL
+        if (strpos($data_url, 'data:image/png;base64,') !== 0) {
+            return array('ok' => false, 'msg' => 'La firma recibida no tiene un formato valido', 'ruta' => '');
+        }
+
+        // 2. Decodificar base64 en modo estricto
+        $base64_limpio = substr($data_url, strlen('data:image/png;base64,'));
+        $binario = base64_decode($base64_limpio, true);
+        if ($binario === false) {
+            return array('ok' => false, 'msg' => 'La firma recibida no se pudo decodificar', 'ruta' => '');
+        }
+
+        // 3. Limite de tamano: 500 KB
+        if (strlen($binario) > 500 * 1024) {
+            return array('ok' => false, 'msg' => 'La imagen de la firma excede el tamano permitido', 'ruta' => '');
+        }
+
+        // 4. Verificar magia PNG real (no confiar solo en el prefijo)
+        $magia_png = "\x89PNG\r\n\x1a\n";
+        if (substr($binario, 0, 8) !== $magia_png) {
+            return array('ok' => false, 'msg' => 'La firma recibida no es una imagen PNG valida', 'ruta' => '');
+        }
+
+        // 5. Crear carpeta protegida si no existe
+        $carpeta = 'storage/firmas/';
+        if (!is_dir($carpeta)) {
+            mkdir($carpeta, 0755, true);
+        }
+
+        // 6. Nombre unico construido en servidor (sin nada del POST)
+        $nombre_archivo = 'firma_' . $id_acudiente . '_' . date('YmdHis') . '.png';
+        $ruta_relativa = $carpeta . $nombre_archivo;
+
+        $escritos = file_put_contents($ruta_relativa, $binario);
+        if ($escritos === false) {
+            return array('ok' => false, 'msg' => 'No se pudo guardar la imagen de la firma', 'ruta' => '');
+        }
+
+        return array('ok' => true, 'msg' => 'Firma guardada', 'ruta' => $ruta_relativa);
+    }
+
+    // 26. Firmar toda la cola obligatoria pendiente con la misma imagen
+    // Una sola firma respalda todos los documentos aceptados en el envio.
+    function firmar_cola_acudiente($persona_id_acudiente, $ruta_firma)
+    {
+        $id_acudiente = intval($persona_id_acudiente);
+
+        // 1. Listar documentos obligatorios activos
+        $docs = $this->_consultar(
+            "SELECT id, version FROM tipo_autorizacion WHERE activo = 1 AND clase = 'obligatorio' ORDER BY orden ASC, id ASC",
+            array()
+        );
+        if (empty($docs)) {
+            return 0;
+        }
+
+        // 2. Datos de evidencia de auditoria
+        if (isset($_SERVER['HTTP_USER_AGENT'])) {
+            $agente = $_SERVER['HTTP_USER_AGENT'];
+        } else {
+            $agente = '';
+        }
+        if (isset($_SESSION['usuario'])) {
+            $documento_usuario = $_SESSION['usuario'];
+        } else {
+            $documento_usuario = '';
+        }
+        if (isset($_SESSION['nombre_usuario_c'])) {
+            $nombre_completo = $_SESSION['nombre_usuario_c'];
+        } else if (isset($_SESSION['nombre_usuario'])) {
+            $nombre_completo = $_SESSION['nombre_usuario'];
+        } else {
+            $nombre_completo = '';
+        }
+        $ip_cliente = verIP();
+        $fecha_firma = date('Y-m-d H:i:s');
+
+        // 3. Por cada documento: crear o actualizar la firma aceptada
+        $firmados = 0;
+        for ($i = 0; $i < count($docs); $i++) {
+            $tipo_id = intval($docs[$i]['id']);
+            $version_doc = $docs[$i]['version'];
+
+            $existe = $this->_obtener_fila(
+                "SELECT id, aceptada FROM autorizacion_firmada WHERE acudiente_id = ? AND tipo_autorizacion_id = ? AND version_firmada = ?",
+                array($id_acudiente, $tipo_id, $version_doc)
+            );
+
+            $hash_evidencia = hash('sha256', $id_acudiente . '|' . $documento_usuario . '|' . $version_doc . '|' . $fecha_firma . '|' . $ip_cliente . '|ACEPTADA');
+            $evidencia = array(
+                'ip' => $ip_cliente,
+                'user_agent' => $agente,
+                'fecha_hora' => $fecha_firma,
+                'persona_id' => $id_acudiente,
+                'documento' => $documento_usuario,
+                'nombre_completo' => $nombre_completo,
+                'version_documento' => $version_doc,
+                'estado' => 'ACEPTADA',
+                'hash_evidencia' => $hash_evidencia
+            );
+            $firma_json = json_encode($evidencia, JSON_UNESCAPED_UNICODE);
+
+            if (!empty($existe)) {
+                if (isset($existe['id'])) {
+                    $this->_actualizar('autorizacion_firmada', array(
+                        'aceptada' => 1,
+                        'fecha_firma' => $fecha_firma,
+                        'firma_electronica' => $firma_json,
+                        'firma_imagen' => $ruta_firma
+                    ), array('id' => intval($existe['id'])));
+                    $firmados = $firmados + 1;
+                }
+            } else {
+                $this->_insertar('autorizacion_firmada', array(
+                    'deportista_id' => null,
+                    'acudiente_id' => $id_acudiente,
+                    'tipo_autorizacion_id' => $tipo_id,
+                    'fecha_firma' => $fecha_firma,
+                    'firma_electronica' => $firma_json,
+                    'firma_imagen' => $ruta_firma,
+                    'aceptada' => 1,
+                    'version_firmada' => $version_doc
+                ));
+                $firmados = $firmados + 1;
+            }
+        }
+
+        return $firmados;
+    }
 }

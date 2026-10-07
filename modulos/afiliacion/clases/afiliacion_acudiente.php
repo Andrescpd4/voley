@@ -184,10 +184,25 @@ trait afiliacion_acudiente
             }
         }
 
-        // 14. Registrar en bitacora
+        // 14. Si se envia a revision: guardar firma y firmar la cola obligatoria
+        if ($modo === 'enviar') {
+            if (isset($_POST['firma_imagen_data'])) {
+                $firma_data_post = trim($_POST['firma_imagen_data']);
+            } else {
+                $firma_data_post = '';
+            }
+            $res_firma = $this->guardar_firma_acudiente($persona_id_acudiente, $firma_data_post);
+            if (!$res_firma['ok']) {
+                $this->_error($res_firma['msg']);
+                return;
+            }
+            $this->firmar_cola_acudiente($persona_id_acudiente, $res_firma['ruta']);
+        }
+
+        // 15. Registrar en bitacora
         $this->_historiar(1, 'Registro afiliacion deportista', $nuevo_deportista_id, 'Deportista: ' . $dep_nombre1 . ' ' . $dep_apellido1 . ' - Estado: ' . $estado_deportista);
 
-        // 15. Responder con datos para el frontend
+        // 16. Responder con datos para el frontend
         $respuesta = array(
             'deportista_id' => $nuevo_deportista_id,
             'persona_id' => $nueva_persona_id,
@@ -386,7 +401,22 @@ trait afiliacion_acudiente
             }
         }
 
-        // 14. Bitacora
+        // 14. Si se envia a revision: guardar firma y firmar la cola obligatoria
+        if ($modo === 'enviar') {
+            if (isset($_POST['firma_imagen_data'])) {
+                $firma_data_post = trim($_POST['firma_imagen_data']);
+            } else {
+                $firma_data_post = '';
+            }
+            $res_firma = $this->guardar_firma_acudiente($persona_id_acudiente, $firma_data_post);
+            if (!$res_firma['ok']) {
+                $this->_error($res_firma['msg']);
+                return;
+            }
+            $this->firmar_cola_acudiente($persona_id_acudiente, $res_firma['ruta']);
+        }
+
+        // 15. Bitacora
         $this->_historiar(3, 'Actualizar afiliacion deportista', $deportista_id, 'Estado: ' . $nuevo_estado);
 
         if ($modo === 'enviar') {
@@ -879,6 +909,18 @@ trait afiliacion_acudiente
             }
             if ($contacto_tel === '') {
                 $errores[] = 'El telefono de emergencia es requerido';
+            }
+
+            // La firma dibujada del acudiente es obligatoria al enviar
+            if (isset($_POST['firma_imagen_data'])) {
+                $firma_data = trim($_POST['firma_imagen_data']);
+            } else {
+                $firma_data = '';
+            }
+            if ($firma_data === '') {
+                $errores[] = 'La firma del acudiente es requerida para enviar a revision';
+            } else if (strpos($firma_data, 'data:image/png;base64,') !== 0) {
+                $errores[] = 'La firma recibida no tiene un formato valido';
             }
         }
 
