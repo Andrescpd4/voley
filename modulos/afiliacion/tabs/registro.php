@@ -14,6 +14,16 @@ if ($persona_id_sesion > 0) {
 }
 ?>
 
+<style>
+    canvas#signature {
+        border: 2px solid black;
+    }
+
+    form>* {
+        margin: 10px;
+    }
+</style>
+
 <!-- ===== FORMULARIO DE REGISTRO DE AFILIACION VOLEY+ ===== -->
 <div class="row">
     <div class="col-lg-12">
@@ -23,20 +33,20 @@ if ($persona_id_sesion > 0) {
             <input type="hidden" id="reg_modo_guardado" name="modo_guardado" value="borrador">
 
             <?php if ($es_admin): ?>
-            <!-- BLOQUE SOLO ADMIN: registrar a nombre de otro acudiente (pruebas y soporte) -->
-            <div class="alert alert-warning d-flex flex-column gap-2 mb-3" role="alert">
-                <div>
-                    <i class="ri-shield-user-line me-1"></i>
-                    <strong>Modo administrador:</strong> por defecto el registro queda a tu propia persona (para pruebas).
-                    Si quieres registrar a nombre de un acudiente real, seleccionalo aqui.
+                <!-- BLOQUE SOLO ADMIN: registrar a nombre de otro acudiente (pruebas y soporte) -->
+                <div class="alert alert-warning d-flex flex-column gap-2 mb-3" role="alert">
+                    <div>
+                        <i class="ri-shield-user-line me-1"></i>
+                        <strong>Modo administrador:</strong> por defecto el registro queda a tu propia persona (para pruebas).
+                        Si quieres registrar a nombre de un acudiente real, seleccionalo aqui.
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium mb-1" for="reg_acudiente_override">Registrar a nombre de</label>
+                        <select class="form-select" id="reg_acudiente_override" name="acudiente_id_override">
+                            <option value="0">Mi propia persona (prueba rapida)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-medium mb-1" for="reg_acudiente_override">Registrar a nombre de</label>
-                    <select class="form-select" id="reg_acudiente_override" name="acudiente_id_override">
-                        <option value="0">Mi propia persona (prueba rapida)</option>
-                    </select>
-                </div>
-            </div>
             <?php endif; ?>
 
             <!-- ============================================================ -->
@@ -168,12 +178,12 @@ if ($persona_id_sesion > 0) {
                         <div class="col-md-4">
                             <label class="form-label fw-medium">Nombre Completo del Acudiente</label>
                             <input type="text" class="form-control bg-light" readonly
-                                   value="<?php echo htmlspecialchars(($datos_acudiente_actual['nombre1'] ?? '') . ' ' . ($datos_acudiente_actual['nombre2'] ?? '') . ' ' . ($datos_acudiente_actual['apellido1'] ?? '') . ' ' . ($datos_acudiente_actual['apellido2'] ?? '')); ?>">
+                                value="<?php echo htmlspecialchars(($datos_acudiente_actual['nombre1'] ?? '') . ' ' . ($datos_acudiente_actual['nombre2'] ?? '') . ' ' . ($datos_acudiente_actual['apellido1'] ?? '') . ' ' . ($datos_acudiente_actual['apellido2'] ?? '')); ?>">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-medium">Documento Acudiente</label>
                             <input type="text" class="form-control bg-light" readonly
-                                   value="<?php echo htmlspecialchars(($datos_acudiente_actual['tipo_documento'] ?? '') . ' ' . ($datos_acudiente_actual['identificacion'] ?? '')); ?>">
+                                value="<?php echo htmlspecialchars(($datos_acudiente_actual['tipo_documento'] ?? '') . ' ' . ($datos_acudiente_actual['identificacion'] ?? '')); ?>">
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-medium">Parentesco con el Deportista <span class="text-danger">*</span></label>
@@ -200,17 +210,17 @@ if ($persona_id_sesion > 0) {
                         <div class="col-md-4">
                             <label class="form-label" for="reg_acu_celular">Celular Acudiente (Editable)</label>
                             <input type="tel" class="form-control" id="reg_acu_celular" name="acu_celular"
-                                   value="<?php echo htmlspecialchars($datos_acudiente_actual['celular'] ?? ''); ?>" placeholder="Celular de contacto">
+                                value="<?php echo htmlspecialchars($datos_acudiente_actual['celular'] ?? ''); ?>" placeholder="Celular de contacto">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="reg_acu_correo">Correo Acudiente (Editable)</label>
                             <input type="email" class="form-control" id="reg_acu_correo" name="acu_correo"
-                                   value="<?php echo htmlspecialchars($datos_acudiente_actual['correo'] ?? ''); ?>" placeholder="Correo de notificaciones">
+                                value="<?php echo htmlspecialchars($datos_acudiente_actual['correo'] ?? ''); ?>" placeholder="Correo de notificaciones">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="reg_acu_direccion">Direccion Acudiente (Editable)</label>
                             <input type="text" class="form-control" id="reg_acu_direccion" name="acu_direccion"
-                                   value="<?php echo htmlspecialchars($datos_acudiente_actual['direccion'] ?? ''); ?>" placeholder="Direccion del hogar">
+                                value="<?php echo htmlspecialchars($datos_acudiente_actual['direccion'] ?? ''); ?>" placeholder="Direccion del hogar">
                         </div>
                     </div>
                 </div>
@@ -271,24 +281,38 @@ if ($persona_id_sesion > 0) {
             </div>
 
             <!-- ============================================================ -->
-            <!-- BOTONES DE ACCION: GUARDAR BORRADOR / ENVIAR                 -->
+            <!-- FIRMA                                                        -->
             <!-- ============================================================ -->
-            <div class="card mb-4 border-0">
-                <div class="card-body p-0">
-                    <div class="d-flex justify-content-end gap-2 flex-wrap">
-                        <button type="button" class="btn btn-secondary" onclick="afiliacionLimpiarFormularioRegistro()">
-                            <i class="ri-eraser-line me-1"></i> Limpiar Formulario
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" id="btnGuardarBorrador" onclick="afiliacionGuardarRegistro('borrador')">
-                            <i class="ri-save-line me-1"></i> Guardar Borrador
-                        </button>
-                        <button type="button" class="btn btn-success text-dark" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
-                            <i class="ri-send-plane-line me-1"></i> Enviar a Revision
-                        </button>
-                    </div>
+            
+            <form action="submit.php" onsubmit="return onSubmit(this)" method="post">
+                <div>
+                    <canvas id="signature" width="300" height="100"></canvas>
                 </div>
-            </div>
-        </form>
+                <div>
+                    <input type="hidden" name="signature" />
+                </div>
+                <button type="submit">Aceptar y Enviar</button>
+            </form>
+
+                    <!-- ============================================================ -->
+                    <!-- BOTONES DE ACCION: GUARDAR BORRADOR / ENVIAR                 -->
+                    <!-- ============================================================ -->
+                    <div class="card mb-4 border-0">
+                        <div class="card-body p-0">
+                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                <button type="button" class="btn btn-secondary" onclick="afiliacionLimpiarFormularioRegistro()">
+                                    <i class="ri-eraser-line me-1"></i> Limpiar Formulario
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="btnGuardarBorrador" onclick="afiliacionGuardarRegistro('borrador')">
+                                    <i class="ri-save-line me-1"></i> Guardar Borrador
+                                </button>
+                                <button type="button" class="btn btn-success text-dark" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
+                                    <i class="ri-send-plane-line me-1"></i> Enviar a Revision
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
     </div>
 </div>
 
@@ -327,271 +351,293 @@ if ($persona_id_sesion > 0) {
 <!-- JAVASCRIPT EXCLUSIVO DEL TAB REGISTRO                        -->
 <!-- ============================================================ -->
 <script type="text/javascript">
-var modalDocsInstancia = null;
-// Cache local: evita pedir categorias y acudientes al servidor mas de una vez
-var afiliCacheCategorias = null;
-var afiliCacheAcudientes = null;
+    var modalDocsInstancia = null;
+    // Cache local: evita pedir categorias y acudientes al servidor mas de una vez
+    var afiliCacheCategorias = null;
+    var afiliCacheAcudientes = null;
 
-jQuery(document).ready(function($) {
-    // 1. Inicializar modal de documentos
-    var modalElemento = document.getElementById('modalDocumentosRequeridos');
-    if (modalElemento) {
-        modalDocsInstancia = bootstrap.Modal.getOrCreateInstance(modalElemento);
-    }
+    jQuery(document).ready(function($) {
+        // 1. Inicializar modal de documentos
+        var modalElemento = document.getElementById('modalDocumentosRequeridos');
+        if (modalElemento) {
+            modalDocsInstancia = bootstrap.Modal.getOrCreateInstance(modalElemento);
+        }
 
-    // 2. Cargar categorias en el select
-    afiliacionCargarCategoriasSelect();
+        // 2. Cargar categorias en el select
+        afiliacionCargarCategoriasSelect();
 
-    // 3. Si es admin, cargar acudientes para el select de pruebas (ver PHP $es_admin)
-    var selectOverride = document.getElementById('reg_acudiente_override');
-    if (selectOverride) {
-        afiliacionCargarAcudientesOverride();
-    }
-});
+        // 3. Si es admin, cargar acudientes para el select de pruebas (ver PHP $es_admin)
+        var selectOverride = document.getElementById('reg_acudiente_override');
+        if (selectOverride) {
+            afiliacionCargarAcudientesOverride();
+        }
+    });
 
-// Cargar acudientes para el select solo-admin (usa cache si ya se pidio antes)
-function afiliacionCargarAcudientesOverride() {
-    // Si ya tenemos la lista en memoria, pintarla sin ir al servidor
-    if (afiliCacheAcudientes !== null) {
-        afiliacionPintarAcudientesOverride(afiliCacheAcudientes);
-        return;
-    }
-    afiliacionAjax('listar_acudientes_admin', {}, function(respuesta) {
-        if (!respuesta.error && respuesta.data) {
-            afiliCacheAcudientes = respuesta.data;
+    // Cargar acudientes para el select solo-admin (usa cache si ya se pidio antes)
+    function afiliacionCargarAcudientesOverride() {
+        // Si ya tenemos la lista en memoria, pintarla sin ir al servidor
+        if (afiliCacheAcudientes !== null) {
             afiliacionPintarAcudientesOverride(afiliCacheAcudientes);
-        }
-    });
-}
-
-// Pintar las opciones del select solo-admin
-function afiliacionPintarAcudientesOverride(lista) {
-    var select = document.getElementById('reg_acudiente_override');
-    if (!select) {
-        return;
-    }
-    for (var i = 0; i < lista.length; i++) {
-        var item = lista[i];
-        var opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = item.nombre;
-        select.appendChild(opt);
-    }
-}
-
-// Cargar categorias activas desde el backend (usa cache si ya se pidio antes)
-function afiliacionCargarCategoriasSelect() {
-    // Si ya tenemos la lista en memoria, pintarla sin ir al servidor
-    if (afiliCacheCategorias !== null) {
-        afiliacionPintarCategoriasSelect(afiliCacheCategorias);
-        return;
-    }
-    afiliacionAjax('listar_categorias', {}, function(respuesta) {
-        if (!respuesta.error && respuesta.data) {
-            afiliCacheCategorias = respuesta.data;
-            afiliacionPintarCategoriasSelect(afiliCacheCategorias);
-        }
-    });
-}
-
-// Pintar las opciones del select de categorias
-function afiliacionPintarCategoriasSelect(lista) {
-    var select = document.getElementById('reg_dep_categoria_id');
-    if (!select) {
-        return;
-    }
-    select.innerHTML = '<option value="">Seleccione categoria...</option>';
-    for (var i = 0; i < lista.length; i++) {
-        var item = lista[i];
-        var opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = item.nombre + ' (' + item.edad_minima + '-' + item.edad_maxima + ' años)';
-        select.appendChild(opt);
-    }
-}
-
-// Quitar todas las marcas de error del formulario
-function afiliacionLimpiarErrores() {
-    var form = document.getElementById('formRegistroAfiliacion');
-    var marcados = form.querySelectorAll('.afili-invalido');
-    for (var i = 0; i < marcados.length; i++) {
-        marcados[i].classList.remove('afili-invalido');
-        marcados[i].removeAttribute('aria-invalid');
-    }
-    var textos = form.querySelectorAll('.afili-error-texto');
-    for (var j = 0; j < textos.length; j++) {
-        textos[j].parentNode.removeChild(textos[j]);
-    }
-}
-
-// Marcar un campo con error visible y texto de ayuda
-function afiliacionMarcarCampo(id_campo, mensaje) {
-    var campo = document.getElementById(id_campo);
-    if (!campo) {
-        return;
-    }
-    campo.classList.add('afili-invalido');
-    campo.setAttribute('aria-invalid', 'true');
-    // Crear el texto de ayuda debajo del campo
-    var ayuda = document.createElement('div');
-    ayuda.className = 'afili-error-texto';
-    ayuda.textContent = mensaje;
-    campo.parentNode.appendChild(ayuda);
-}
-
-// Validar los campos obligatorios antes de enviar a revision
-// Marca cada campo vacio en rojo y lleva el foco al primero
-function afiliacionValidarEnvio() {
-    var obligatorios = [
-        { id: 'reg_dep_nombre1', nombre: 'Primer nombre' },
-        { id: 'reg_dep_apellido1', nombre: 'Primer apellido' },
-        { id: 'reg_dep_identificacion', nombre: 'Numero de documento' },
-        { id: 'reg_dep_fecha_nacimiento', nombre: 'Fecha de nacimiento' },
-        { id: 'reg_dep_eps', nombre: 'EPS / SISBEN' },
-        { id: 'reg_dep_contacto_nombre', nombre: 'Nombre de contacto de emergencia' },
-        { id: 'reg_dep_contacto_telefono', nombre: 'Telefono de emergencia' }
-    ];
-    var primer_campo_vacio = null;
-    var total_vacios = 0;
-    for (var i = 0; i < obligatorios.length; i++) {
-        var campo = document.getElementById(obligatorios[i].id);
-        var valor = '';
-        if (campo) {
-            valor = campo.value.trim();
-        }
-        if (valor === '') {
-            afiliacionMarcarCampo(obligatorios[i].id, 'El campo ' + obligatorios[i].nombre + ' es obligatorio.');
-            total_vacios = total_vacios + 1;
-            if (primer_campo_vacio === null) {
-                primer_campo_vacio = campo;
-            }
-        }
-    }
-    // Llevar el foco al primer campo con error
-    if (primer_campo_vacio !== null) {
-        primer_campo_vacio.focus();
-    }
-    if (total_vacios > 0) {
-        return false;
-    }
-    return true;
-}
-
-// Guardar formulario (borrador o envio a revision)
-function afiliacionGuardarRegistro(modo) {
-    var form = document.getElementById('formRegistroAfiliacion');
-    document.getElementById('reg_modo_guardado').value = modo;
-
-    // Quitar marcas de error anteriores
-    afiliacionLimpiarErrores();
-
-    // Validacion en cliente solo para envio (el borrador permite incompletos)
-    if (modo === 'enviar') {
-        var valido = afiliacionValidarEnvio();
-        if (!valido) {
-            afiliacionMostrarMsg('Por favor complete los campos marcados en rojo antes de enviar a revision', 'warning');
             return;
         }
+        afiliacionAjax('listar_acudientes_admin', {}, function(respuesta) {
+            if (!respuesta.error && respuesta.data) {
+                afiliCacheAcudientes = respuesta.data;
+                afiliacionPintarAcudientesOverride(afiliCacheAcudientes);
+            }
+        });
     }
 
-    var formData = new FormData(form);
-    var deportistaId = parseInt(document.getElementById('reg_deportista_id').value) || 0;
-    var accion = (deportistaId > 0) ? 'actualizar_registro_acudiente' : 'crear_registro_acudiente';
+    // Pintar las opciones del select solo-admin
+    function afiliacionPintarAcudientesOverride(lista) {
+        var select = document.getElementById('reg_acudiente_override');
+        if (!select) {
+            return;
+        }
+        for (var i = 0; i < lista.length; i++) {
+            var item = lista[i];
+            var opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.nombre;
+            select.appendChild(opt);
+        }
+    }
 
-    // Deshabilitar botones mientras se procesa
-    document.getElementById('btnGuardarBorrador').disabled = true;
-    document.getElementById('btnEnviarRevision').disabled = true;
-
-    afiliacionAjaxFormData(accion, formData, function(respuesta) {
-        document.getElementById('btnGuardarBorrador').disabled = false;
-        document.getElementById('btnEnviarRevision').disabled = false;
-
-        if (!respuesta.error) {
-            afiliacionMostrarMsg(respuesta.msg, 'success');
-
-            // Si se creo uno nuevo, guardar el ID asignado para poder subir documentos
-            if (respuesta.data && respuesta.data.deportista_id) {
-                document.getElementById('reg_deportista_id').value = respuesta.data.deportista_id;
-                document.getElementById('btnAbrirModalDocs').disabled = false;
-                document.getElementById('textoEstadoDocs').innerHTML = '<span class="text-success fw-medium">Borrador listo. Ya puede adjuntar documentos.</span>';
+    // Cargar categorias activas desde el backend (usa cache si ya se pidio antes)
+    function afiliacionCargarCategoriasSelect() {
+        // Si ya tenemos la lista en memoria, pintarla sin ir al servidor
+        if (afiliCacheCategorias !== null) {
+            afiliacionPintarCategoriasSelect(afiliCacheCategorias);
+            return;
+        }
+        afiliacionAjax('listar_categorias', {}, function(respuesta) {
+            if (!respuesta.error && respuesta.data) {
+                afiliCacheCategorias = respuesta.data;
+                afiliacionPintarCategoriasSelect(afiliCacheCategorias);
             }
+        });
+    }
 
-            // Si se envio a revision, sugerir pasar al historial
-            if (modo === 'enviar') {
-                if (typeof afiliacionMisSolicitudesCargarDatos === 'function') {
-                    afiliacionMisSolicitudesCargarDatos();
+    // Pintar las opciones del select de categorias
+    function afiliacionPintarCategoriasSelect(lista) {
+        var select = document.getElementById('reg_dep_categoria_id');
+        if (!select) {
+            return;
+        }
+        select.innerHTML = '<option value="">Seleccione categoria...</option>';
+        for (var i = 0; i < lista.length; i++) {
+            var item = lista[i];
+            var opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.nombre + ' (' + item.edad_minima + '-' + item.edad_maxima + ' años)';
+            select.appendChild(opt);
+        }
+    }
+
+    // Quitar todas las marcas de error del formulario
+    function afiliacionLimpiarErrores() {
+        var form = document.getElementById('formRegistroAfiliacion');
+        var marcados = form.querySelectorAll('.afili-invalido');
+        for (var i = 0; i < marcados.length; i++) {
+            marcados[i].classList.remove('afili-invalido');
+            marcados[i].removeAttribute('aria-invalid');
+        }
+        var textos = form.querySelectorAll('.afili-error-texto');
+        for (var j = 0; j < textos.length; j++) {
+            textos[j].parentNode.removeChild(textos[j]);
+        }
+    }
+
+    // Marcar un campo con error visible y texto de ayuda
+    function afiliacionMarcarCampo(id_campo, mensaje) {
+        var campo = document.getElementById(id_campo);
+        if (!campo) {
+            return;
+        }
+        campo.classList.add('afili-invalido');
+        campo.setAttribute('aria-invalid', 'true');
+        // Crear el texto de ayuda debajo del campo
+        var ayuda = document.createElement('div');
+        ayuda.className = 'afili-error-texto';
+        ayuda.textContent = mensaje;
+        campo.parentNode.appendChild(ayuda);
+    }
+
+    // Validar los campos obligatorios antes de enviar a revision
+    // Marca cada campo vacio en rojo y lleva el foco al primero
+    function afiliacionValidarEnvio() {
+        var obligatorios = [{
+                id: 'reg_dep_nombre1',
+                nombre: 'Primer nombre'
+            },
+            {
+                id: 'reg_dep_apellido1',
+                nombre: 'Primer apellido'
+            },
+            {
+                id: 'reg_dep_identificacion',
+                nombre: 'Numero de documento'
+            },
+            {
+                id: 'reg_dep_fecha_nacimiento',
+                nombre: 'Fecha de nacimiento'
+            },
+            {
+                id: 'reg_dep_eps',
+                nombre: 'EPS / SISBEN'
+            },
+            {
+                id: 'reg_dep_contacto_nombre',
+                nombre: 'Nombre de contacto de emergencia'
+            },
+            {
+                id: 'reg_dep_contacto_telefono',
+                nombre: 'Telefono de emergencia'
+            }
+        ];
+        var primer_campo_vacio = null;
+        var total_vacios = 0;
+        for (var i = 0; i < obligatorios.length; i++) {
+            var campo = document.getElementById(obligatorios[i].id);
+            var valor = '';
+            if (campo) {
+                valor = campo.value.trim();
+            }
+            if (valor === '') {
+                afiliacionMarcarCampo(obligatorios[i].id, 'El campo ' + obligatorios[i].nombre + ' es obligatorio.');
+                total_vacios = total_vacios + 1;
+                if (primer_campo_vacio === null) {
+                    primer_campo_vacio = campo;
                 }
             }
         }
-    });
-}
-
-// Abrir modal de documentos requeridos
-function afiliacionAbrirModalDocumentos() {
-    var deportistaId = parseInt(document.getElementById('reg_deportista_id').value) || 0;
-    if (deportistaId <= 0) {
-        afiliacionMostrarMsg('Debe guardar el borrador antes de adjuntar documentos', 'warning');
-        return;
+        // Llevar el foco al primer campo con error
+        if (primer_campo_vacio !== null) {
+            primer_campo_vacio.focus();
+        }
+        if (total_vacios > 0) {
+            return false;
+        }
+        return true;
     }
 
-    afiliacionCargarListaDocumentos(deportistaId);
-    if (modalDocsInstancia) {
-        modalDocsInstancia.show();
-    }
-}
+    // Guardar formulario (borrador o envio a revision)
+    function afiliacionGuardarRegistro(modo) {
+        var form = document.getElementById('formRegistroAfiliacion');
+        document.getElementById('reg_modo_guardado').value = modo;
 
-// Cargar la lista de documentos y su estado
-function afiliacionCargarListaDocumentos(deportistaId) {
-    var contenedor = document.getElementById('contenedorListaDocumentos');
-    contenedor.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Cargando...</span></div>';
+        // Quitar marcas de error anteriores
+        afiliacionLimpiarErrores();
 
-    afiliacionAjax('listar_tipos_documento', { deportista_id: deportistaId }, function(respuesta) {
-        if (!respuesta.error && respuesta.data) {
-            var lista = respuesta.data;
-            if (lista.length === 0) {
-                contenedor.innerHTML = '<div class="alert alert-info">No hay tipos de documentos configurados.</div>';
+        // Validacion en cliente solo para envio (el borrador permite incompletos)
+        if (modo === 'enviar') {
+            var valido = afiliacionValidarEnvio();
+            if (!valido) {
+                afiliacionMostrarMsg('Por favor complete los campos marcados en rojo antes de enviar a revision', 'warning');
                 return;
             }
-
-            var html = '';
-            for (var i = 0; i < lista.length; i++) {
-                html += afiliacionCrearFilaTipoDocumento(lista[i], deportistaId);
-            }
-            contenedor.innerHTML = html;
         }
-    });
-}
 
-// Crear fila HTML de un tipo de documento con template backticks
-function afiliacionCrearFilaTipoDocumento(tipo, deportistaId) {
-    var idTipo = tipo.id;
-    var nombre = afiliacionEsc(tipo.nombre);
-    var obligatorio = (parseInt(tipo.obligatorio) === 1);
-    var subido = tipo.subido;
-    var badgeHtml = '';
-    var accionesHtml = '';
+        var formData = new FormData(form);
+        var deportistaId = parseInt(document.getElementById('reg_deportista_id').value) || 0;
+        var accion = (deportistaId > 0) ? 'actualizar_registro_acudiente' : 'crear_registro_acudiente';
 
-    if (subido && tipo.documento) {
-        var rutaArchivo = afiliacionEsc(tipo.documento.archivo);
-        var docId = tipo.documento.id;
-        badgeHtml = `<span class="badge bg-success text-dark"><i class="ri-check-line me-1"></i>Subido</span>`;
-        accionesHtml = `
+        // Deshabilitar botones mientras se procesa
+        document.getElementById('btnGuardarBorrador').disabled = true;
+        document.getElementById('btnEnviarRevision').disabled = true;
+
+        afiliacionAjaxFormData(accion, formData, function(respuesta) {
+            document.getElementById('btnGuardarBorrador').disabled = false;
+            document.getElementById('btnEnviarRevision').disabled = false;
+
+            if (!respuesta.error) {
+                afiliacionMostrarMsg(respuesta.msg, 'success');
+
+                // Si se creo uno nuevo, guardar el ID asignado para poder subir documentos
+                if (respuesta.data && respuesta.data.deportista_id) {
+                    document.getElementById('reg_deportista_id').value = respuesta.data.deportista_id;
+                    document.getElementById('btnAbrirModalDocs').disabled = false;
+                    document.getElementById('textoEstadoDocs').innerHTML = '<span class="text-success fw-medium">Borrador listo. Ya puede adjuntar documentos.</span>';
+                }
+
+                // Si se envio a revision, sugerir pasar al historial
+                if (modo === 'enviar') {
+                    if (typeof afiliacionMisSolicitudesCargarDatos === 'function') {
+                        afiliacionMisSolicitudesCargarDatos();
+                    }
+                }
+            }
+        });
+    }
+
+    // Abrir modal de documentos requeridos
+    function afiliacionAbrirModalDocumentos() {
+        var deportistaId = parseInt(document.getElementById('reg_deportista_id').value) || 0;
+        if (deportistaId <= 0) {
+            afiliacionMostrarMsg('Debe guardar el borrador antes de adjuntar documentos', 'warning');
+            return;
+        }
+
+        afiliacionCargarListaDocumentos(deportistaId);
+        if (modalDocsInstancia) {
+            modalDocsInstancia.show();
+        }
+    }
+
+    // Cargar la lista de documentos y su estado
+    function afiliacionCargarListaDocumentos(deportistaId) {
+        var contenedor = document.getElementById('contenedorListaDocumentos');
+        contenedor.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Cargando...</span></div>';
+
+        afiliacionAjax('listar_tipos_documento', {
+            deportista_id: deportistaId
+        }, function(respuesta) {
+            if (!respuesta.error && respuesta.data) {
+                var lista = respuesta.data;
+                if (lista.length === 0) {
+                    contenedor.innerHTML = '<div class="alert alert-info">No hay tipos de documentos configurados.</div>';
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < lista.length; i++) {
+                    html += afiliacionCrearFilaTipoDocumento(lista[i], deportistaId);
+                }
+                contenedor.innerHTML = html;
+            }
+        });
+    }
+
+    // Crear fila HTML de un tipo de documento con template backticks
+    function afiliacionCrearFilaTipoDocumento(tipo, deportistaId) {
+        var idTipo = tipo.id;
+        var nombre = afiliacionEsc(tipo.nombre);
+        var obligatorio = (parseInt(tipo.obligatorio) === 1);
+        var subido = tipo.subido;
+        var badgeHtml = '';
+        var accionesHtml = '';
+
+        if (subido && tipo.documento) {
+            var rutaArchivo = afiliacionEsc(tipo.documento.archivo);
+            var docId = tipo.documento.id;
+            badgeHtml = `<span class="badge bg-success text-dark"><i class="ri-check-line me-1"></i>Subido</span>`;
+            accionesHtml = `
             <a href="${rutaArchivo}" target="_blank" class="btn btn-sm btn-outline-info btn-afili-accion" title="Ver documento" aria-label="Ver documento adjunto"><i class="ri-eye-line"></i></a>
             <button type="button" class="btn btn-sm btn-outline-danger btn-afili-accion" onclick="afiliacionEliminarDoc(${docId}, ${deportistaId})" title="Eliminar" aria-label="Eliminar documento adjunto"><i class="ri-delete-bin-line"></i></button>
         `;
-    } else {
-        if (obligatorio) {
-            badgeHtml = `<span class="badge bg-danger text-dark">Requerido</span>`;
         } else {
-            badgeHtml = `<span class="badge bg-secondary">Opcional</span>`;
-        }
-        accionesHtml = `
+            if (obligatorio) {
+                badgeHtml = `<span class="badge bg-danger text-dark">Requerido</span>`;
+            } else {
+                badgeHtml = `<span class="badge bg-secondary">Opcional</span>`;
+            }
+            accionesHtml = `
             <input type="file" id="input_file_${idTipo}" class="d-none" accept=".pdf,image/*" onchange="afiliacionSubirArchivoTipo(${idTipo}, ${deportistaId})">
             <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('input_file_${idTipo}').click()"><i class="ri-upload-cloud-line me-1"></i>Subir</button>
         `;
-    }
+        }
 
-    return `
+        return `
     <div class="list-group-item d-flex justify-content-between align-items-center py-3">
         <div>
             <div class="d-flex align-items-center gap-2">
@@ -604,54 +650,56 @@ function afiliacionCrearFilaTipoDocumento(tipo, deportistaId) {
             ${accionesHtml}
         </div>
     </div>`;
-}
-
-// Subir archivo al seleccionar del input
-function afiliacionSubirArchivoTipo(tipoDocId, deportistaId) {
-    var input = document.getElementById('input_file_' + tipoDocId);
-    if (!input.files || input.files.length === 0) {
-        return;
     }
 
-    var archivo = input.files[0];
-    if (archivo.size > 10 * 1024 * 1024) {
-        afiliacionMostrarMsg('El archivo excede el limite de 10 MB', 'error');
-        input.value = '';
-        return;
-    }
-
-    var formData = new FormData();
-    formData.append('deportista_id', deportistaId);
-    formData.append('tipo_documento_id', tipoDocId);
-    formData.append('archivo', archivo);
-
-    afiliacionAjaxFormData('subir_documento_acudiente', formData, function(respuesta) {
-        if (!respuesta.error) {
-            afiliacionMostrarMsg(respuesta.msg, 'success');
-            afiliacionCargarListaDocumentos(deportistaId);
+    // Subir archivo al seleccionar del input
+    function afiliacionSubirArchivoTipo(tipoDocId, deportistaId) {
+        var input = document.getElementById('input_file_' + tipoDocId);
+        if (!input.files || input.files.length === 0) {
+            return;
         }
-    });
-}
 
-// Eliminar documento (pide confirmacion con el estilo del sistema)
-function afiliacionEliminarDoc(documentoId, deportistaId) {
-    afiliacionConfirmar('Eliminar documento', 'Esta seguro de eliminar este documento?', 'Si, eliminar', function() {
-        afiliacionAjax('eliminar_documento_acudiente', { documento_id: documentoId }, function(respuesta) {
+        var archivo = input.files[0];
+        if (archivo.size > 10 * 1024 * 1024) {
+            afiliacionMostrarMsg('El archivo excede el limite de 10 MB', 'error');
+            input.value = '';
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('deportista_id', deportistaId);
+        formData.append('tipo_documento_id', tipoDocId);
+        formData.append('archivo', archivo);
+
+        afiliacionAjaxFormData('subir_documento_acudiente', formData, function(respuesta) {
             if (!respuesta.error) {
                 afiliacionMostrarMsg(respuesta.msg, 'success');
                 afiliacionCargarListaDocumentos(deportistaId);
             }
         });
-    });
-}
+    }
 
-// Limpiar formulario completo para un nuevo registro
-function afiliacionLimpiarFormularioRegistro() {
-    document.getElementById('formRegistroAfiliacion').reset();
-    afiliacionLimpiarErrores();
-    document.getElementById('reg_deportista_id').value = '0';
-    document.getElementById('reg_modo_guardado').value = 'borrador';
-    document.getElementById('btnAbrirModalDocs').disabled = true;
-    document.getElementById('textoEstadoDocs').innerHTML = 'Debe guardar el borrador primero.';
-}
+    // Eliminar documento (pide confirmacion con el estilo del sistema)
+    function afiliacionEliminarDoc(documentoId, deportistaId) {
+        afiliacionConfirmar('Eliminar documento', 'Esta seguro de eliminar este documento?', 'Si, eliminar', function() {
+            afiliacionAjax('eliminar_documento_acudiente', {
+                documento_id: documentoId
+            }, function(respuesta) {
+                if (!respuesta.error) {
+                    afiliacionMostrarMsg(respuesta.msg, 'success');
+                    afiliacionCargarListaDocumentos(deportistaId);
+                }
+            });
+        });
+    }
+
+    // Limpiar formulario completo para un nuevo registro
+    function afiliacionLimpiarFormularioRegistro() {
+        document.getElementById('formRegistroAfiliacion').reset();
+        afiliacionLimpiarErrores();
+        document.getElementById('reg_deportista_id').value = '0';
+        document.getElementById('reg_modo_guardado').value = 'borrador';
+        document.getElementById('btnAbrirModalDocs').disabled = true;
+        document.getElementById('textoEstadoDocs').innerHTML = 'Debe guardar el borrador primero.';
+    }
 </script>

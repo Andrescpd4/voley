@@ -16,7 +16,9 @@ if (!function_exists('is_login')) {
 }
 
 if (is_login()) {
-    // 1. Candado de aceptacion de politica de privacidad
+    // 1. Candado de consentimientos obligatorios (cola completa, no un solo slug)
+    // Si falta la firma de CUALQUIER documento obligatorio, se redirige a
+    // politica-privacidad, pagina que permite firmar toda la cola pendiente.
     if (MENU !== 'politica-privacidad' && MENU !== 'cerrar-sesion') {
         global $db;
         if (isset($_SESSION['persona_id'])) {
@@ -26,26 +28,33 @@ if (is_login()) {
         }
 
         if ($persona_id_actual > 0) {
-            $sql_pol = "SELECT id, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
-            $tipo_pol = $db->select_row($sql_pol);
+            $sql_docs = "SELECT id, version FROM tipo_autorizacion WHERE activo = 1 AND clase = 'obligatorio' ORDER BY orden ASC, id ASC";
+            $docs_obligatorios = $db->select_all($sql_docs);
 
-            if (is_array($tipo_pol) && isset($tipo_pol['id'])) {
-                $tipo_id_pol = intval($tipo_pol['id']);
-                $version_pol = $tipo_pol['version'];
-                $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_actual . " AND tipo_autorizacion_id = " . $tipo_id_pol . " AND version_firmada = '" . $db->escape_string($version_pol) . "' AND aceptada = 1";
-                $firma_pol = $db->select_row($sql_firma);
+            $falta_alguno = false;
+            if (is_array($docs_obligatorios)) {
+                for ($i = 0; $i < count($docs_obligatorios); $i++) {
+                    $tipo_id_doc = intval($docs_obligatorios[$i]['id']);
+                    $version_doc = $docs_obligatorios[$i]['version'];
+                    $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_actual . " AND tipo_autorizacion_id = " . $tipo_id_doc . " AND version_firmada = '" . $db->escape_string($version_doc) . "' AND aceptada = 1";
+                    $firma_doc = $db->select_row($sql_firma);
 
-                $tiene_firma_vigente = false;
-                if (is_array($firma_pol)) {
-                    if (isset($firma_pol['id'])) {
-                        $tiene_firma_vigente = true;
+                    $tiene_firma_vigente = false;
+                    if (is_array($firma_doc)) {
+                        if (isset($firma_doc['id'])) {
+                            $tiene_firma_vigente = true;
+                        }
+                    }
+
+                    if (!$tiene_firma_vigente) {
+                        $falta_alguno = true;
                     }
                 }
+            }
 
-                if (!$tiene_firma_vigente) {
-                    header("Location: " . WEB_ROOT . "politica-privacidad");
-                    exit();
-                }
+            if ($falta_alguno) {
+                header("Location: " . WEB_ROOT . "politica-privacidad");
+                exit();
             }
         }
     }

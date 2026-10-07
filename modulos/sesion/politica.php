@@ -49,30 +49,43 @@ if (is_array($datos_politica)) {
     }
 }
 
-// 2. Verificar estado de sesion y si el usuario actual tiene la firma al dia
+// 2. Verificar sesion y armar la cola de documentos obligatorios pendientes
 $usuario_autenticado = false;
-$firma_vigente_registrada = false;
-$fecha_firma_usuario = '';
+$cola_pendientes = array();
 
 if (function_exists('is_login')) {
     if (is_login()) {
         $usuario_autenticado = true;
         if (isset($_SESSION['persona_id'])) {
             $persona_id_logueado = intval($_SESSION['persona_id']);
-            if ($persona_id_logueado > 0 && $tipo_id_politica > 0) {
-                $sql_firma_check = "SELECT id, fecha_firma FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_logueado . " AND tipo_autorizacion_id = " . $tipo_id_politica . " AND version_firmada = '" . $db->escape_string($version_politica) . "' AND aceptada = 1";
-                $firma_check = $db->select_row($sql_firma_check);
-                if (is_array($firma_check)) {
-                    if (isset($firma_check['id'])) {
-                        $firma_vigente_registrada = true;
-                        if (isset($firma_check['fecha_firma'])) {
-                            $fecha_firma_usuario = $firma_check['fecha_firma'];
+            if ($persona_id_logueado > 0) {
+                $sql_docs = "SELECT id, nombre, contenido, resumen, archivo_url, version FROM tipo_autorizacion WHERE activo = 1 AND clase = 'obligatorio' ORDER BY orden ASC, id ASC";
+                $docs_todos = $db->select_all($sql_docs);
+                if (is_array($docs_todos)) {
+                    for ($i = 0; $i < count($docs_todos); $i++) {
+                        $doc_tipo_id = intval($docs_todos[$i]['id']);
+                        $doc_version = $docs_todos[$i]['version'];
+                        $sql_firma_check = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_id_logueado . " AND tipo_autorizacion_id = " . $doc_tipo_id . " AND version_firmada = '" . $db->escape_string($doc_version) . "' AND aceptada = 1";
+                        $firma_check = $db->select_row($sql_firma_check);
+                        $doc_firmado = false;
+                        if (is_array($firma_check)) {
+                            if (isset($firma_check['id'])) {
+                                $doc_firmado = true;
+                            }
+                        }
+                        if (!$doc_firmado) {
+                            $cola_pendientes[] = $docs_todos[$i];
                         }
                     }
                 }
             }
         }
     }
+}
+if (count($cola_pendientes) > 0) {
+    $hay_pendientes = true;
+} else {
+    $hay_pendientes = false;
 }
 ?>
 
@@ -172,141 +185,161 @@ if (function_exists('is_login')) {
 
 <?php else : ?>
 <!-- ============================================================ -->
-<!-- VISTA DENTRO DEL SISTEMA (USUARIO AUTENTICADO)              -->
+<!-- VISTA DENTRO DEL SISTEMA: COLA DE DOCUMENTOS PENDIENTES     -->
+<!-- Sin page-title-box ni h4: el titulo global lo pinta cabeza.php -->
 <!-- ============================================================ -->
-<div class="row">
-    <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0"><?php echo htmlspecialchars($titulo_politica); ?></h4>
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="<?php echo WEB_ROOT ?>inicio">Inicio</a></li>
-                    <li class="breadcrumb-item active">Política de Privacidad</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <?php if (!$firma_vigente_registrada) : ?>
-        <!-- Aviso de consentimiento pendiente -->
+        <?php if ($hay_pendientes) : ?>
+        <!-- Aviso unico de documentos pendientes -->
         <div class="alert alert-warning border-0 d-flex align-items-center mb-3 shadow-sm p-3" role="alert">
-            <i class="ri-alert-line fs-2 me-3 text-warning"></i>
+            <i class="ri-alert-line fs-2 me-3"></i>
             <div class="flex-grow-1">
-                <h5 class="alert-heading fs-6 mb-1 fw-bold">Consentimiento requerido</h5>
-                <p class="mb-0 small">Para continuar utilizando el sistema debes registrar tu aceptación a la versión vigente (<strong>Versión <?php echo htmlspecialchars($version_politica); ?></strong>).</p>
+                <div class="fw-bold mb-1">Tienes documentos pendientes de firma</div>
+                <p class="mb-0">Lee cada documento y registra tu decisión. Al firmar el último podrás entrar al sistema.</p>
             </div>
         </div>
-        <?php endif; ?>
 
-        <div class="card">
-            <div class="card-header border-0 bg-primary-subtle d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary p-2">
-                        <i class="ri-shield-check-line fs-5 text-white"></i>
-                    </span>
-                    <div>
-                        <h5 class="card-title mb-0"><?php echo htmlspecialchars($titulo_politica); ?></h5>
-                        <small class="text-muted">Documento institucional vigente</small>
-                    </div>
+        <div id="colaPoliticaLista">
+        <?php for ($i = 0; $i < count($cola_pendientes); $i++) : ?>
+            <?php
+            $doc_actual = $cola_pendientes[$i];
+            $doc_id = intval($doc_actual['id']);
+            $doc_nombre = htmlspecialchars($doc_actual['nombre']);
+            $doc_version = htmlspecialchars($doc_actual['version']);
+            if (isset($doc_actual['resumen']) && $doc_actual['resumen'] !== '') {
+                $doc_resumen = htmlspecialchars($doc_actual['resumen']);
+            } else {
+                $doc_resumen = '';
+            }
+            if (isset($doc_actual['archivo_url']) && $doc_actual['archivo_url'] !== '') {
+                $doc_archivo = $doc_actual['archivo_url'];
+            } else {
+                $doc_archivo = '';
+            }
+            ?>
+            <div class="card mb-3" id="colaDoc<?php echo $doc_id; ?>">
+                <div class="card-header bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <h6 class="card-title mb-0">
+                        <i class="ri-file-text-line me-1"></i> <?php echo $doc_nombre; ?>
+                    </h6>
+                    <span class="badge bg-primary-subtle text-primary">Versión <?php echo $doc_version; ?></span>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <?php if ($firma_vigente_registrada) : ?>
-                    <span class="badge bg-success text-white"><i class="ri-check-double-line me-1"></i> Aceptada (<?php echo htmlspecialchars($fecha_firma_usuario); ?>)</span>
-                    <?php else : ?>
-                    <span class="badge bg-warning text-dark"><i class="ri-time-line me-1"></i> Pendiente de firma</span>
+                <div class="card-body">
+                    <?php if ($doc_resumen !== '') : ?>
+                    <p class="fw-medium"><?php echo $doc_resumen; ?></p>
                     <?php endif; ?>
-                    <span class="badge bg-primary text-white fs-6">Versión <?php echo htmlspecialchars($version_politica); ?></span>
-                </div>
-            </div>
-            <div class="card-body p-4">
-                <div class="border rounded p-4 bg-light-subtle mb-4" style="max-height: 520px; overflow-y: auto;">
-                    <?php echo $contenido_politica; ?>
-                </div>
-
-                <?php if (!$firma_vigente_registrada) : ?>
-                <!-- Botones de accion para usuario con consentimiento pendiente -->
-                <div class="p-3 border rounded bg-light mb-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div>
-                        <div class="fw-semibold">¿Aceptas los términos y condiciones de tratamiento de datos?</div>
-                        <small class="text-muted">Tu decisión quedará registrada con fecha, hora y firma electrónica para auditoría.</small>
+                    <div class="border rounded p-3 bg-light-subtle mb-3" style="max-height: 320px; overflow-y: auto;">
+                        <?php echo $doc_actual['contenido']; ?>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-primary" id="btnAceptarPolVista" onclick="politicaAceptarDesdeVista()">
-                            <i class="ri-check-line me-1"></i> Aceptar términos
+                    <?php if ($doc_archivo !== '') : ?>
+                    <p class="mb-3">
+                        <a href="<?php echo htmlspecialchars($doc_archivo); ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="ri-file-pdf-line me-1"></i> Abrir PDF adjunto
+                        </a>
+                    </p>
+                    <?php endif; ?>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-primary" id="btnColaAceptar<?php echo $doc_id; ?>" onclick="colaAceptarDocumento(<?php echo $doc_id; ?>)">
+                            <i class="ri-check-line me-1"></i> Aceptar este documento
                         </button>
-                        <button type="button" class="btn btn-outline-danger" id="btnRechazarPolVista" onclick="politicaRechazarDesdeVista()">
+                        <button type="button" class="btn btn-outline-danger" onclick="colaRechazarDocumento(<?php echo $doc_id; ?>)">
                             <i class="ri-close-line me-1"></i> Rechazar y salir
                         </button>
                     </div>
                 </div>
-                <?php endif; ?>
-
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-2 border-top">
-                    <span class="text-muted small">
-                        <i class="ri-lock-line me-1"></i> Tratamiento de datos bajo estándares de seguridad y confidencialidad.
-                    </span>
-                    <a href="<?php echo WEB_ROOT ?>inicio" class="btn btn-outline-primary btn-sm">
-                        <i class="ri-home-4-line me-1"></i> Volver al panel principal
-                    </a>
-                </div>
+            </div>
+        <?php endfor; ?>
+        </div>
+        <?php else : ?>
+        <!-- Cola vacia: todo firmado -->
+        <div class="alert alert-success border-0 d-flex align-items-center mb-3 shadow-sm p-3" role="alert">
+            <i class="ri-checkbox-circle-line fs-2 me-3"></i>
+            <div class="flex-grow-1">
+                <div class="fw-bold mb-1">Estás al día</div>
+                <p class="mb-0">Ya firmaste todos los documentos obligatorios vigentes.</p>
             </div>
         </div>
+        <div class="card">
+            <div class="card-body text-center py-4">
+                <a href="<?php echo WEB_ROOT ?>inicio" class="btn btn-primary">
+                    <i class="ri-home-4-line me-1"></i> Entrar al panel principal
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
 <script type="text/javascript">
-// Aceptar la politica desde la vista embebida
-function politicaAceptarDesdeVista() {
-    var boton_aceptar = document.getElementById('btnAceptarPolVista');
-    if (boton_aceptar) {
-        boton_aceptar.disabled = true;
+// Aceptar un documento de la cola
+function colaAceptarDocumento(tipoId) {
+    var boton = document.getElementById('btnColaAceptar' + tipoId);
+    if (boton) {
+        boton.disabled = true;
     }
 
-    fetch(web_root + 'iniciar-sesion/aceptar_politica', {
-        method: 'POST'
+    var formData = new FormData();
+    formData.append('tipo_id', tipoId);
+    formData.append('aceptada', 1);
+
+    fetch(web_root + 'iniciar-sesion/guardar_consentimiento', {
+        method: 'POST',
+        body: formData
     })
     .then(function(respuesta) {
         return respuesta.json();
     })
     .then(function(datos_resp) {
         if (datos_resp.error === false) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Consentimiento registrado',
-                text: 'Gracias por aceptar los términos.',
-                timer: 1400,
-                showConfirmButton: false
-            });
-            setTimeout(function() {
-                window.location.href = web_root + 'inicio';
-            }, 1200);
+            var tarjeta = document.getElementById('colaDoc' + tipoId);
+            if (tarjeta) {
+                tarjeta.remove();
+            }
+            if (datos_resp.pendiente) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Documento firmado',
+                    text: 'Aún te faltan documentos por firmar.',
+                    timer: 1400,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Cola completa',
+                    text: 'Gracias por firmar todos los documentos.',
+                    timer: 1400,
+                    showConfirmButton: false
+                });
+                setTimeout(function() {
+                    window.location.href = web_root + 'inicio';
+                }, 1200);
+            }
         } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: datos_resp.msg || 'No se pudo guardar la aceptación.'
+                text: datos_resp.msg || 'No se pudo guardar la firma.'
             });
-            if (boton_aceptar) {
-                boton_aceptar.disabled = false;
+            if (boton) {
+                boton.disabled = false;
             }
         }
     })
     .catch(function(error_red) {
         console.error(error_red);
-        if (boton_aceptar) {
-            boton_aceptar.disabled = false;
+        if (boton) {
+            boton.disabled = false;
         }
     });
 }
 
-// Rechazar la politica y cerrar sesion
-function politicaRechazarDesdeVista() {
+// Rechazar un documento y cerrar sesion
+function colaRechazarDocumento(tipoId) {
     Swal.fire({
-        title: '¿Rechazar política?',
-        text: 'Si rechazas los términos se cerrará tu sesión y no podrás ingresar a la plataforma.',
+        title: '¿Rechazar documento?',
+        text: 'Si rechazas se cerrará tu sesión y no podrás ingresar a la plataforma.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, rechazar y salir',
@@ -315,8 +348,12 @@ function politicaRechazarDesdeVista() {
         cancelButtonColor: '#405189'
     }).then(function(resultado_swal) {
         if (resultado_swal.isConfirmed) {
-            fetch(web_root + 'iniciar-sesion/rechazar_politica', {
-                method: 'POST'
+            var formData = new FormData();
+            formData.append('tipo_id', tipoId);
+            formData.append('aceptada', 0);
+            fetch(web_root + 'iniciar-sesion/guardar_consentimiento', {
+                method: 'POST',
+                body: formData
             })
             .then(function() {
                 window.location.href = web_root + 'iniciar-sesion';

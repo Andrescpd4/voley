@@ -4,7 +4,8 @@
 //
 // Reglas AGENTS.md (§10 y §11):
 //   - if/else en vez de ternarios y ??
-//   - SQL seguro con marcadores ?
+//   - SQL seguro con intval y escape_string (este db no usa ?)
+//   - select_row ya trae LIMIT 1: prohibido agregarlo a mano
 //   - Cero emojis
 //   - Funciones cortas, una sola cosa
 // ============================================================
@@ -18,18 +19,18 @@ class ConsentimientosHelpers
         $this->db = $db;
     }
 
-    // 1. Listar todos los tipos de consentimiento activos
+    // 1. Listar todos los tipos de consentimiento (activos e inactivos para admin)
     function listar_tipos()
     {
         $sql = "SELECT id, nombre, slug, contenido, version, activo, clase, resumen, archivo_url, orden, mostrar_popup
                 FROM tipo_autorizacion
-                WHERE activo = 1
                 ORDER BY orden ASC, id ASC";
         $filas = $this->db->select_all($sql);
-        if (!is_array($filas)) {
+        if (is_array($filas)) {
+            return $filas;
+        } else {
             return array();
         }
-        return $filas;
     }
 
     // 2. Obtener un tipo por ID
@@ -38,12 +39,13 @@ class ConsentimientosHelpers
         $id_limpio = intval($tipo_id);
         $sql = "SELECT id, nombre, slug, contenido, version, activo, clase, resumen, archivo_url, orden, mostrar_popup
                 FROM tipo_autorizacion
-                WHERE id = ? AND activo = 1";
-        $fila = $this->db->select_row($sql, array($id_limpio));
-        if (!is_array($fila)) {
+                WHERE id = " . $id_limpio;
+        $fila = $this->db->select_row($sql);
+        if (is_array($fila)) {
+            return $fila;
+        } else {
             return array();
         }
-        return $fila;
     }
 
     // 3. Obtener un tipo por slug
@@ -52,28 +54,39 @@ class ConsentimientosHelpers
         $slug_limpio = $this->db->escape_string($slug);
         $sql = "SELECT id, nombre, slug, contenido, version, activo, clase, resumen, archivo_url, orden, mostrar_popup
                 FROM tipo_autorizacion
-                WHERE slug = ? AND activo = 1";
-        $fila = $this->db->select_row($sql, array($slug_limpio));
-        if (!is_array($fila)) {
+                WHERE slug = '" . $slug_limpio . "' AND activo = 1";
+        $fila = $this->db->select_row($sql);
+        if (is_array($fila)) {
+            return $fila;
+        } else {
             return array();
         }
-        return $fila;
     }
 
     // 4. Crear nuevo tipo de consentimiento
     function crear_tipo($datos)
     {
+        if (isset($datos['activo'])) {
+            $activo_int = intval($datos['activo']);
+        } else {
+            $activo_int = 1;
+        }
+        if (isset($datos['mostrar_popup'])) {
+            $popup_int = intval($datos['mostrar_popup']);
+        } else {
+            $popup_int = 1;
+        }
         $insertar = array(
             'nombre' => $datos['nombre'],
             'slug' => $datos['slug'],
             'contenido' => $datos['contenido'],
             'version' => $datos['version'],
-            'activo' => isset($datos['activo']) ? intval($datos['activo']) : 1,
+            'activo' => $activo_int,
             'clase' => $datos['clase'],
             'resumen' => $datos['resumen'],
             'archivo_url' => $datos['archivo_url'],
             'orden' => intval($datos['orden']),
-            'mostrar_popup' => isset($datos['mostrar_popup']) ? intval($datos['mostrar_popup']) : 1
+            'mostrar_popup' => $popup_int
         );
         $nuevo_id = $this->db->insert('tipo_autorizacion', $insertar);
         return $nuevo_id;
@@ -83,17 +96,27 @@ class ConsentimientosHelpers
     function actualizar_tipo($tipo_id, $datos)
     {
         $id_limpio = intval($tipo_id);
+        if (isset($datos['activo'])) {
+            $activo_int = intval($datos['activo']);
+        } else {
+            $activo_int = 1;
+        }
+        if (isset($datos['mostrar_popup'])) {
+            $popup_int = intval($datos['mostrar_popup']);
+        } else {
+            $popup_int = 1;
+        }
         $actualizar = array(
             'nombre' => $datos['nombre'],
             'slug' => $datos['slug'],
             'contenido' => $datos['contenido'],
             'version' => $datos['version'],
-            'activo' => isset($datos['activo']) ? intval($datos['activo']) : 1,
+            'activo' => $activo_int,
             'clase' => $datos['clase'],
             'resumen' => $datos['resumen'],
             'archivo_url' => $datos['archivo_url'],
             'orden' => intval($datos['orden']),
-            'mostrar_popup' => isset($datos['mostrar_popup']) ? intval($datos['mostrar_popup']) : 1
+            'mostrar_popup' => $popup_int
         );
         $this->db->update('tipo_autorizacion', $actualizar, array('id' => $id_limpio));
         return true;
@@ -107,48 +130,60 @@ class ConsentimientosHelpers
         return true;
     }
 
-    // 7. Listar firmas con filtros (para historial)
+    // 7. Armar el WHERE de firmas desde filtros (devuelve texto ya escapado)
+    function armar_where_firmas($filtros)
+    {
+        $partes = array();
+
+        if (isset($filtros['tipo_id'])) {
+            if (intval($filtros['tipo_id']) > 0) {
+                $partes[] = "af.tipo_autorizacion_id = " . intval($filtros['tipo_id']);
+            }
+        }
+
+        if (isset($filtros['persona_id'])) {
+            if (intval($filtros['persona_id']) !== 0) {
+                $partes[] = "af.acudiente_id = " . intval($filtros['persona_id']);
+            }
+        }
+
+        if (isset($filtros['aceptada'])) {
+            if ($filtros['aceptada'] !== '') {
+                $partes[] = "af.aceptada = " . intval($filtros['aceptada']);
+            }
+        }
+
+        if (isset($filtros['fecha_desde'])) {
+            if ($filtros['fecha_desde'] !== '') {
+                $fecha_desde = $this->db->escape_string($filtros['fecha_desde']);
+                $partes[] = "af.fecha_firma >= '" . $fecha_desde . "'";
+            }
+        }
+
+        if (isset($filtros['fecha_hasta'])) {
+            if ($filtros['fecha_hasta'] !== '') {
+                $fecha_hasta = $this->db->escape_string($filtros['fecha_hasta']);
+                $partes[] = "af.fecha_firma <= '" . $fecha_hasta . "'";
+            }
+        }
+
+        if (count($partes) > 0) {
+            return 'WHERE ' . implode(' AND ', $partes);
+        } else {
+            return '';
+        }
+    }
+
+    // 8. Listar firmas con filtros (para historial)
     function listar_firmas($filtros = array())
     {
-        $where = array();
-        $params = array();
-
-        if (isset($filtros['tipo_id']) && $filtros['tipo_id'] > 0) {
-            $where[] = "af.tipo_autorizacion_id = ?";
-            $params[] = intval($filtros['tipo_id']);
-        }
-
-        if (isset($filtros['persona_id']) && $filtros['persona_id'] > 0) {
-            $where[] = "af.acudiente_id = ?";
-            $params[] = intval($filtros['persona_id']);
-        }
-
-        if (isset($filtros['aceptada']) && $filtros['aceptada'] !== '') {
-            $where[] = "af.aceptada = ?";
-            $params[] = intval($filtros['aceptada']);
-        }
-
-        if (isset($filtros['fecha_desde']) && $filtros['fecha_desde'] !== '') {
-            $where[] = "af.fecha_firma >= ?";
-            $params[] = $filtros['fecha_desde'];
-        }
-
-        if (isset($filtros['fecha_hasta']) && $filtros['fecha_hasta'] !== '') {
-            $where[] = "af.fecha_firma <= ?";
-            $params[] = $filtros['fecha_hasta'];
-        }
-
-        $where_sql = '';
-        if (count($where) > 0) {
-            $where_sql = 'WHERE ' . implode(' AND ', $where);
-        }
+        $where_sql = $this->armar_where_firmas($filtros);
 
         $sql = "SELECT
                     af.id,
                     af.fecha_firma,
                     af.aceptada,
                     af.version_firmada,
-                    af.firma_electronica,
                     ta.nombre AS tipo_nombre,
                     ta.slug AS tipo_slug,
                     ta.clase AS tipo_clase,
@@ -161,27 +196,45 @@ class ConsentimientosHelpers
                 INNER JOIN persona p ON p.id = af.acudiente_id
                 LEFT JOIN admin_usuario au ON au.persona_id = p.id
                 LEFT JOIN admin_rol r ON r.id = au.rol
-                $where_sql
+                " . $where_sql . "
                 ORDER BY af.fecha_firma DESC";
 
-        $filas = $this->db->select_all($sql, $params);
-        if (!is_array($filas)) {
+        $filas = $this->db->select_all($sql);
+        if (is_array($filas)) {
+            return $filas;
+        } else {
             return array();
         }
-        return $filas;
     }
 
-    // 8. Verificar pendientes de una persona (cola ordenada)
+    // 9. Verificar si un tipo ya tiene firma aceptada vigente
+    function tiene_firma_vigente($persona_id, $tipo_id, $version_vigente)
+    {
+        $id_persona = intval($persona_id);
+        $id_tipo = intval($tipo_id);
+        $version_limpia = $this->db->escape_string($version_vigente);
+
+        $sql_firma = "SELECT id, aceptada, fecha_firma FROM autorizacion_firmada
+                      WHERE acudiente_id = " . $id_persona . " AND tipo_autorizacion_id = " . $id_tipo . " AND version_firmada = '" . $version_limpia . "' AND aceptada = 1";
+        $firma = $this->db->select_row($sql_firma);
+
+        if (is_array($firma)) {
+            if (isset($firma['id'])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 10. Verificar pendientes de una persona (cola ordenada: obligatorios primero)
     function verificar_pendientes($persona_id)
     {
         $id_limpio = intval($persona_id);
 
-        $sql = "SELECT ta.id, ta.nombre, ta.slug, ta.version, ta.clase, ta.resumen, ta.archivo_url, ta.mostrar_popup
-                FROM tipo_autorizacion ta
-                WHERE ta.activo = 1 AND ta.mostrar_popup = 1
-                ORDER BY
-                    CASE WHEN ta.clase = 'obligatorio' THEN 0 ELSE 1 END,
-                    ta.orden ASC";
+        $sql = "SELECT id, nombre, slug, contenido, version, clase, resumen, archivo_url, mostrar_popup
+                FROM tipo_autorizacion
+                WHERE activo = 1 AND clase = 'obligatorio'
+                ORDER BY orden ASC, id ASC";
 
         $tipos = $this->db->select_all($sql);
         if (!is_array($tipos)) {
@@ -189,32 +242,32 @@ class ConsentimientosHelpers
         }
 
         $pendientes = array();
-        foreach ($tipos as $ta) {
+        for ($i = 0; $i < count($tipos); $i++) {
+            $ta = $tipos[$i];
             $tipo_id = intval($ta['id']);
             $version_vigente = $ta['version'];
 
-            $sql_firma = "SELECT id, aceptada, fecha_firma FROM autorizacion_firmada
-                          WHERE acudiente_id = ? AND tipo_autorizacion_id = ? AND version_firmada = ?
-                          LIMIT 1";
-            $firma = $this->db->select_row($sql_firma, array($id_limpio, $tipo_id, $version_vigente));
-
-            $tiene_firma_vigente = false;
-            $firma_aceptada = false;
-            if (is_array($firma) && isset($firma['id'])) {
-                $tiene_firma_vigente = true;
-                $firma_aceptada = intval($firma['aceptada']) === 1;
-            }
-
-            if (!$tiene_firma_vigente || !$firma_aceptada) {
+            if (!$this->tiene_firma_vigente($id_limpio, $tipo_id, $version_vigente)) {
+                if (isset($ta['resumen'])) {
+                    $resumen_txt = $ta['resumen'];
+                } else {
+                    $resumen_txt = '';
+                }
+                if (isset($ta['archivo_url'])) {
+                    $archivo_txt = $ta['archivo_url'];
+                } else {
+                    $archivo_txt = '';
+                }
                 $pendientes[] = array(
                     'tipo_id' => $tipo_id,
                     'nombre' => $ta['nombre'],
                     'slug' => $ta['slug'],
+                    'contenido' => $ta['contenido'],
                     'version' => $version_vigente,
                     'clase' => $ta['clase'],
-                    'resumen' => $ta['resumen'],
-                    'archivo_url' => $ta['archivo_url'],
-                    'url_lectura' => WEB_ROOT . 'politica-privacidad'
+                    'resumen' => $resumen_txt,
+                    'archivo_url' => $archivo_txt,
+                    'mostrar_popup' => intval($ta['mostrar_popup'])
                 );
             }
         }
@@ -222,14 +275,14 @@ class ConsentimientosHelpers
         return $pendientes;
     }
 
-    // 9. Guardar consentimiento (genérico para aceptar/rechazar)
+    // 11. Guardar consentimiento (generico para aceptar/rechazar)
     function guardar_consentimiento($persona_id, $tipo_id, $aceptada)
     {
         $id_persona = intval($persona_id);
         $id_tipo = intval($tipo_id);
         $aceptada_int = intval($aceptada);
 
-        // Obtener tipo vigente
+        // 1. Obtener tipo vigente
         $tipo = $this->obtener_tipo($id_tipo);
         if (empty($tipo)) {
             return array('error' => true, 'msg' => 'Tipo de consentimiento no encontrado.');
@@ -237,45 +290,78 @@ class ConsentimientosHelpers
 
         $version_vigente = $tipo['version'];
 
-        // Evidencia
-        $ip = verIP();
-        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-        $doc = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : '';
-        $nom = isset($_SESSION['nombre_usuario_c']) ? $_SESSION['nombre_usuario_c'] : (isset($_SESSION['nombre_usuario']) ? $_SESSION['nombre_usuario'] : '');
-        $fecha = date('Y-m-d H:i:s');
-        $estado_str = $aceptada_int === 1 ? 'ACEPTADA' : 'RECHAZADA';
-        $hash = hash('sha256', $id_persona . '|' . $doc . '|' . $version_vigente . '|' . $fecha . '|' . $ip . '|' . $estado_str);
+        // 2. Armar evidencia de auditoria
+        if (isset($_SERVER['HTTP_USER_AGENT'])) {
+            $agente_navegador = $_SERVER['HTTP_USER_AGENT'];
+        } else {
+            $agente_navegador = '';
+        }
+        if (isset($_SESSION['usuario'])) {
+            $documento_usuario = $_SESSION['usuario'];
+        } else {
+            $documento_usuario = '';
+        }
+        if (isset($_SESSION['nombre_usuario_c'])) {
+            $nombre_completo = $_SESSION['nombre_usuario_c'];
+        } else if (isset($_SESSION['nombre_usuario'])) {
+            $nombre_completo = $_SESSION['nombre_usuario'];
+        } else {
+            $nombre_completo = '';
+        }
 
-        $evidencia = array(
-            'ip' => $ip,
-            'user_agent' => $ua,
-            'fecha_hora' => $fecha,
+        $ip_cliente = verIP();
+        $fecha_firma = date('Y-m-d H:i:s');
+        if ($aceptada_int === 1) {
+            $estado_str = 'ACEPTADA';
+        } else {
+            $estado_str = 'RECHAZADA';
+        }
+        $hash_evidencia = hash('sha256', $id_persona . '|' . $documento_usuario . '|' . $version_vigente . '|' . $fecha_firma . '|' . $ip_cliente . '|' . $estado_str);
+
+        $evidencia_array = array(
+            'ip' => $ip_cliente,
+            'user_agent' => $agente_navegador,
+            'fecha_hora' => $fecha_firma,
             'persona_id' => $id_persona,
-            'documento' => $doc,
-            'nombre_completo' => $nom,
+            'documento' => $documento_usuario,
+            'nombre_completo' => $nombre_completo,
             'version_documento' => $version_vigente,
             'estado' => $estado_str,
-            'hash_evidencia' => $hash
+            'hash_evidencia' => $hash_evidencia
         );
-        $firma_json = json_encode($evidencia, JSON_UNESCAPED_UNICODE);
 
-        // Verificar si existe registro para esta persona, tipo y versión
+        $firma_json = json_encode($evidencia_array, JSON_UNESCAPED_UNICODE);
+
+        // 3. Verificar si existe registro para esta persona, tipo y version
+        $version_limpia = $this->db->escape_string($version_vigente);
         $sql_existe = "SELECT id FROM autorizacion_firmada
-                       WHERE acudiente_id = ? AND tipo_autorizacion_id = ? AND version_firmada = ?";
-        $existe = $this->db->select_row($sql_existe, array($id_persona, $id_tipo, $version_vigente));
+                       WHERE acudiente_id = " . $id_persona . " AND tipo_autorizacion_id = " . $id_tipo . " AND version_firmada = '" . $version_limpia . "'";
+        $existe = $this->db->select_row($sql_existe);
 
-        if (is_array($existe) && isset($existe['id'])) {
-            $this->db->update('autorizacion_firmada', array(
-                'aceptada' => $aceptada_int,
-                'fecha_firma' => $fecha,
-                'firma_electronica' => $firma_json
-            ), array('id' => intval($existe['id'])));
+        if (is_array($existe)) {
+            if (isset($existe['id'])) {
+                $this->db->update('autorizacion_firmada', array(
+                    'aceptada' => $aceptada_int,
+                    'fecha_firma' => $fecha_firma,
+                    'firma_electronica' => $firma_json
+                ), array('id' => intval($existe['id'])));
+            } else {
+                $this->db->insert('autorizacion_firmada', array(
+                    'deportista_id' => null,
+                    'acudiente_id' => $id_persona,
+                    'tipo_autorizacion_id' => $id_tipo,
+                    'fecha_firma' => $fecha_firma,
+                    'firma_electronica' => $firma_json,
+                    'aceptada' => $aceptada_int,
+                    'version_firmada' => $version_vigente
+                ));
+            }
         } else {
             $this->db->insert('autorizacion_firmada', array(
                 'deportista_id' => null,
                 'acudiente_id' => $id_persona,
                 'tipo_autorizacion_id' => $id_tipo,
-                'fecha_firma' => $fecha,
+                'fecha_firma' => $fecha_firma,
                 'firma_electronica' => $firma_json,
                 'aceptada' => $aceptada_int,
                 'version_firmada' => $version_vigente
@@ -285,7 +371,7 @@ class ConsentimientosHelpers
         return array('error' => false, 'msg' => 'Consentimiento registrado correctamente.');
     }
 
-    // 10. Subir archivo adjunto (PDF) a storage/autorizaciones/
+    // 12. Subir archivo adjunto (PDF) a storage/autorizaciones/
     function subir_archivo($elemento, $carpeta = 'autorizaciones')
     {
         return $this->db->SubirArchivo($elemento, 10, 'pdf', $carpeta);

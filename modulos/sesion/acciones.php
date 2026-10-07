@@ -44,35 +44,222 @@ class Sesion extends clase_base
         }
     }
 
-    // 2. Comprobar si el usuario tiene pendiente la aceptacion de la politica de privacidad
+    // 2. Comprobar los documentos obligatorios pendientes de firma (cola completa)
+    // Devuelve la lista ordenada para que el login y la pagina de bloqueo
+    // firmen TODOS los pendientes y nunca se forme un bucle infinito.
     function verificar_politica_pendiente($persona_id)
     {
         $id_limpio = intval($persona_id);
-        $sql_tipo = "SELECT id, nombre, version FROM tipo_autorizacion WHERE slug = 'politica_privacidad' AND activo = 1";
+        $sql_tipos = "SELECT id, nombre, version FROM tipo_autorizacion WHERE activo = 1 AND clase = 'obligatorio' ORDER BY orden ASC, id ASC";
+        $tipos = $this->db->select_all($sql_tipos);
+
+        $pendientes = array();
+        if (is_array($tipos)) {
+            for ($i = 0; $i < count($tipos); $i++) {
+                $tipo_id = intval($tipos[$i]['id']);
+                $version_vigente = $tipos[$i]['version'];
+                $nombre_doc = $tipos[$i]['nombre'];
+
+                // Buscar firma vigente aceptada
+                $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $id_limpio . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "' AND aceptada = 1";
+                $firma = $this->db->select_row($sql_firma);
+
+                $firmado = false;
+                if (is_array($firma)) {
+                    if (isset($firma['id'])) {
+                        $firmado = true;
+                    }
+                }
+
+                if (!$firmado) {
+                    $pendientes[] = array(
+                        'tipo_id' => $tipo_id,
+                        'nombre' => $nombre_doc,
+                        'version' => $version_vigente
+                    );
+                }
+            }
+        }
+
+        if (count($pendientes) > 0) {
+            $hay_pendiente = true;
+        } else {
+            $hay_pendiente = false;
+        }
+
+        return array('pendiente' => $hay_pendiente, 'pendientes' => $pendientes);
+    }
+
+    // 2b. Consultar la cola pendiente de la sesion actual (para el popup)
+    function consultar_pendientes()
+    {
+        if (!isset($_SESSION['persona_id'])) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = "Sin sesión activa.";
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            exit(0);
+        }
+
+        $estado_cola = $this->verificar_politica_pendiente(intval($_SESSION['persona_id']));
+
+        $r = array();
+        $r['error'] = false;
+        $r['pendiente'] = $estado_cola['pendiente'];
+        $r['pendientes'] = $estado_cola['pendientes'];
+        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+        exit(0);
+    }
+    // 2c. Guardar una firma de la cola (aceptar o rechazar un documento)
+    // Si rechaza, se destruye la sesion igual que con la politica anterior.
+    function guardar_consentimiento()
+    {
+        if (isset($_SESSION['persona_id'])) {
+            $persona_sesion = intval($_SESSION['persona_id']);
+        } else {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = "Debe iniciar sesión para registrar su consentimiento.";
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            exit(0);
+        }
+
+        if (isset($_POST['tipo_id'])) {
+            $tipo_post = intval($_POST['tipo_id']);
+        } else {
+            $tipo_post = 0;
+        }
+        if (isset($_POST['aceptada'])) {
+            $aceptada_post = intval($_POST['aceptada']);
+        } else {
+            $aceptada_post = -1;
+        }
+
+        if ($tipo_post <= 0) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = "Documento requerido.";
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            exit(0);
+        }
+        if ($aceptada_post !== 0 && $aceptada_post !== 1) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = "Decisión no válida.";
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            exit(0);
+        }
+
+        // Buscar el tipo vigente
+        $sql_tipo = "SELECT id, nombre, version FROM tipo_autorizacion WHERE id = " . $tipo_post . " AND activo = 1";
         $tipo = $this->db->select_row($sql_tipo);
 
-        if (!is_array($tipo)) {
-            return array('pendiente' => false, 'version' => '1.0', 'tipo_id' => 0, 'nombre' => '');
-        }
-        if (!isset($tipo['id'])) {
-            return array('pendiente' => false, 'version' => '1.0', 'tipo_id' => 0, 'nombre' => '');
+        if (!is_array($tipo) || !isset($tipo['id'])) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = "No se encontró el documento solicitado.";
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            exit(0);
         }
 
         $tipo_id = intval($tipo['id']);
         $version_vigente = $tipo['version'];
-        $nombre_doc = $tipo['nombre'];
 
-        // Buscar firma vigente aceptada
-        $sql_firma = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $id_limpio . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "' AND aceptada = 1";
-        $firma = $this->db->select_row($sql_firma);
-
-        if (is_array($firma)) {
-            if (isset($firma['id'])) {
-                return array('pendiente' => false, 'version' => $version_vigente, 'tipo_id' => $tipo_id, 'nombre' => $nombre_doc);
-            }
+        if (isset($_SERVER['HTTP_USER_AGENT'])) {
+            $agente_navegador = $_SERVER['HTTP_USER_AGENT'];
+        } else {
+            $agente_navegador = '';
         }
 
-        return array('pendiente' => true, 'version' => $version_vigente, 'tipo_id' => $tipo_id, 'nombre' => $nombre_doc);
+        if (isset($_SESSION['usuario'])) {
+            $documento_usuario = $_SESSION['usuario'];
+        } else {
+            $documento_usuario = '';
+        }
+
+        if (isset($_SESSION['nombre_usuario_c'])) {
+            $nombre_completo = $_SESSION['nombre_usuario_c'];
+        } else if (isset($_SESSION['nombre_usuario'])) {
+            $nombre_completo = $_SESSION['nombre_usuario'];
+        } else {
+            $nombre_completo = '';
+        }
+
+        $ip_cliente = verIP();
+        $fecha_firma = date('Y-m-d H:i:s');
+        if ($aceptada_post === 1) {
+            $estado_str = 'ACEPTADA';
+        } else {
+            $estado_str = 'RECHAZADA';
+        }
+        $hash_evidencia = hash('sha256', $persona_sesion . '|' . $documento_usuario . '|' . $version_vigente . '|' . $fecha_firma . '|' . $ip_cliente . '|' . $estado_str);
+
+        $evidencia_array = array(
+            'ip' => $ip_cliente,
+            'user_agent' => $agente_navegador,
+            'fecha_hora' => $fecha_firma,
+            'persona_id' => $persona_sesion,
+            'documento' => $documento_usuario,
+            'nombre_completo' => $nombre_completo,
+            'version_documento' => $version_vigente,
+            'estado' => $estado_str,
+            'hash_evidencia' => $hash_evidencia
+        );
+
+        $firma_json = json_encode($evidencia_array, JSON_UNESCAPED_UNICODE);
+
+        // Revisar si ya existe registro para esta persona, tipo y version
+        $sql_existe = "SELECT id FROM autorizacion_firmada WHERE acudiente_id = " . $persona_sesion . " AND tipo_autorizacion_id = " . $tipo_id . " AND version_firmada = '" . $this->db->escape_string($version_vigente) . "'";
+        $fila_existe = $this->db->select_row($sql_existe);
+
+        if (is_array($fila_existe) && isset($fila_existe['id'])) {
+            $datos_actualizar = array(
+                'aceptada' => $aceptada_post,
+                'fecha_firma' => $fecha_firma,
+                'firma_electronica' => $firma_json
+            );
+            $this->db->update('autorizacion_firmada', $datos_actualizar, array('id' => intval($fila_existe['id'])));
+        } else {
+            $datos_insertar = array(
+                'deportista_id' => null,
+                'acudiente_id' => $persona_sesion,
+                'tipo_autorizacion_id' => $tipo_id,
+                'fecha_firma' => $fecha_firma,
+                'firma_electronica' => $firma_json,
+                'aceptada' => $aceptada_post,
+                'version_firmada' => $version_vigente
+            );
+            $this->db->insert('autorizacion_firmada', $datos_insertar);
+        }
+
+        // Si rechazo algun documento obligatorio, la sesion no puede continuar
+        if ($aceptada_post === 0) {
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_destroy();
+            }
+            $r = array();
+            $r['error'] = false;
+            $r['msg'] = "Has rechazado un documento obligatorio. Tu sesión no puede continuar.";
+            $r['redirect'] = WEB_ROOT . 'iniciar-sesion';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            exit(0);
+        }
+
+        // Revisar si queda algo pendiente en la cola
+        $estado_cola = $this->verificar_politica_pendiente($persona_sesion);
+
+        $r = array();
+        $r['error'] = false;
+        $r['msg'] = "Consentimiento registrado correctamente.";
+        $r['pendiente'] = $estado_cola['pendiente'];
+        $r['pendientes'] = $estado_cola['pendientes'];
+        if ($estado_cola['pendiente']) {
+            $r['redirect'] = WEB_ROOT . 'politica-privacidad';
+        } else {
+            $r['redirect'] = WEB_ROOT . 'inicio';
+        }
+        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+        exit(0);
     }
 
     // 3. Iniciar sesion
@@ -214,8 +401,7 @@ class Sesion extends clase_base
                 $r['msg'] = "Bienvenido " . $_SESSION['nombre_usuario'];
                 $r['token'] = $jwt;
                 $r['politica_pendiente'] = $estado_politica['pendiente'];
-                $r['politica_version'] = $estado_politica['version'];
-                $r['politica_nombre'] = $estado_politica['nombre'];
+                $r['pendientes'] = $estado_politica['pendientes'];
                 $r['politica_url'] = WEB_ROOT . 'politica-privacidad';
                 $r['redirect'] = WEB_ROOT . 'inicio';
                 echo json_encode($r, JSON_UNESCAPED_UNICODE);

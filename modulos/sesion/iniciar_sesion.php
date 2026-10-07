@@ -151,26 +151,66 @@
             });
         }
 
-        // 2. Enviar aceptacion de politica al servidor
+        // 2. Enviar aceptacion de TODA la cola de documentos al servidor
         function enviarAceptacionPolitica(url_redireccion) {
-            fetch(web_root + 'iniciar-sesion/aceptar_politica', {
+            pedirColaPendiente(function(cola) {
+                if (cola.length === 0) {
+                    window.location.href = url_redireccion || (web_root + 'inicio');
+                    return;
+                }
+                aceptarSiguienteDocumento(cola, 0, url_redireccion);
+            });
+        }
+
+        // 2b. Consultar la cola pendiente en el servidor
+        function pedirColaPendiente(callback) {
+            fetch(web_root + 'iniciar-sesion/consultar_pendientes', {
                 method: 'POST'
             })
             .then(function(respuesta) {
                 return respuesta.json();
             })
             .then(function(datos_resp) {
+                if (datos_resp.error === false && datos_resp.pendientes) {
+                    callback(datos_resp.pendientes);
+                } else {
+                    callback([]);
+                }
+            })
+            .catch(function(error_conexion) {
+                console.error(error_conexion);
+                callback([]);
+            });
+        }
+
+        // 2c. Aceptar los documentos uno por uno hasta vaciar la cola
+        function aceptarSiguienteDocumento(cola, indice, url_redireccion) {
+            if (indice >= cola.length) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Consentimiento registrado!',
+                    text: 'Ingresando al sistema...',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+                setTimeout(function() {
+                    window.location.href = url_redireccion || (web_root + 'inicio');
+                }, 1000);
+                return;
+            }
+            var formData = new FormData();
+            formData.append('tipo_id', cola[indice].tipo_id);
+            formData.append('aceptada', 1);
+            fetch(web_root + 'iniciar-sesion/guardar_consentimiento', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(respuesta) {
+                return respuesta.json();
+            })
+            .then(function(datos_resp) {
                 if (datos_resp.error === false) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Consentimiento registrado!',
-                        text: 'Ingresando al sistema...',
-                        timer: 1200,
-                        showConfirmButton: false
-                    });
-                    setTimeout(function() {
-                        window.location.href = datos_resp.redirect || url_redireccion || (web_root + 'inicio');
-                    }, 1000);
+                    aceptarSiguienteDocumento(cola, indice + 1, url_redireccion);
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -215,27 +255,29 @@
             });
         }
 
-        // 4. Mostrar popup bloqueante de aceptacion de politica
+        // 4. Mostrar popup bloqueante con TODA la cola de documentos pendientes
         function mostrarModalPolitica(datos_login) {
             var url_politica = datos_login.politica_url || (web_root + 'politica-privacidad');
-            var version_politica = datos_login.politica_version || '1.0';
-            var nombre_politica = datos_login.politica_nombre || 'Política de Privacidad';
             var url_destino = datos_login.redirect || (web_root + 'inicio');
+            var cola_inicial = datos_login.pendientes || [];
 
             var contenido_html = `<div class="text-black">
-                <p class="mb-2">Para ingresar a Voley+ debes leer y aceptar el documento vigente.</p>
-                <p class="mb-3"><span class="badge bg-primary text-white">Versión ${version_politica}</span></p>
+                <p class="mb-2">Para ingresar a Voley+ debes leer y aceptar los documentos vigentes.</p>
+                <div id="colaLoginLista" class="text-start mb-3"></div>
                 <a href="${url_politica}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="ri-external-link-line me-1"></i> Abrir y leer documento completo
+                    <i class="ri-external-link-line me-1"></i> Abrir y leer documentos completos
                 </a>
             </div>`;
 
+            // Pintar la lista de pendientes dentro del popup
+            pintarColaLogin(cola_inicial);
+
             Swal.fire({
-                title: 'Política de Privacidad',
+                title: 'Documentos del club',
                 html: contenido_html,
                 icon: 'info',
                 showCancelButton: true,
-                confirmButtonText: '<i class="ri-check-line me-1"></i> Acepto la política',
+                confirmButtonText: '<i class="ri-check-line me-1"></i> Acepto los documentos',
                 cancelButtonText: '<i class="ri-close-line me-1"></i> Rechazar y salir',
                 confirmButtonColor: '#405189',
                 cancelButtonColor: '#405189',
@@ -249,6 +291,29 @@
                     enviarRechazoPolitica();
                 }
             });
+        }
+
+        // 4b. Pintar una fila por cada documento pendiente en el popup
+        function pintarColaLogin(cola) {
+            var contenedor = document.getElementById('colaLoginLista');
+            if (!contenedor) {
+                return;
+            }
+            if (!cola || cola.length === 0) {
+                contenedor.innerHTML = '<p class="mb-0">No hay documentos pendientes.</p>';
+                return;
+            }
+            var html = '<ul class="list-group">';
+            for (var i = 0; i < cola.length; i++) {
+                var nombre = (cola[i].nombre || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var version = (cola[i].version || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${nombre}</span>
+                    <span class="badge bg-primary-subtle text-primary">Versión ${version}</span>
+                </li>`;
+            }
+            html += '</ul>';
+            contenedor.innerHTML = html;
         }
 
         // 5. Restaurar estado del boton ingresar
