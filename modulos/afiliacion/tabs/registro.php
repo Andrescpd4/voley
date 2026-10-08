@@ -393,8 +393,19 @@ if ($persona_id_sesion > 0) {
             afiliacionCargarAcudientesOverride();
         }
 
-        // 4. Preparar el canvas de firma del acudiente
+        // 4. Preparar el canvas de firma del acudiente (se calibra cuando el tab sea visible)
         afiliacionFirmaIniciar();
+
+        // 5. Re-calibrar al cambiar a la pestaña de Registro (evita que mida 0px si inicia oculta)
+        var tabRegistroBoton = document.getElementById('tab-registro-link');
+        if (tabRegistroBoton) {
+            tabRegistroBoton.addEventListener('shown.bs.tab', function() {
+                var canvas = document.getElementById('firmaCanvas');
+                if (canvas) {
+                    afiliacionFirmaAjustar(canvas);
+                }
+            });
+        }
     });
 
     // Cargar acudientes para el select solo-admin (usa cache si ya se pidio antes)
@@ -737,7 +748,11 @@ if ($persona_id_sesion > 0) {
         if (!canvas) {
             return;
         }
-        afiliacionFirmaAjustar(canvas);
+
+        // Calibrar solo si el canvas ya es visible en pantalla
+        if (canvas.clientWidth > 0) {
+            afiliacionFirmaAjustar(canvas);
+        }
 
         canvas.addEventListener('mousedown', afiliacionFirmaEmpezar);
         canvas.addEventListener('mousemove', afiliacionFirmaMover);
@@ -747,43 +762,105 @@ if ($persona_id_sesion > 0) {
         canvas.addEventListener('touchmove', afiliacionFirmaMover, { passive: false });
         canvas.addEventListener('touchend', afiliacionFirmaTerminar);
 
+        // Si cambia el tamano de la ventana (ej: rotar movil), ajustar conservando el trazo
         window.addEventListener('resize', function() {
-            afiliacionFirmaAjustar(canvas);
+            var c = document.getElementById('firmaCanvas');
+            if (c) {
+                afiliacionFirmaAjustar(c);
+            }
         });
     }
 
-    // Ajustar el canvas al ancho visible con nitidez en pantallas HD
+    // Ajustar el canvas al ancho visible real con nitidez en pantallas HD
+    // Si ya habia dibujo previo, lo copia en memoria y lo escala para conservarlo
     function afiliacionFirmaAjustar(canvas) {
-        var escala = 1;
-        if (window.devicePixelRatio && window.devicePixelRatio > 1) {
-            escala = window.devicePixelRatio;
-        }
         var ancho_css = canvas.clientWidth;
         var alto_css = 180;
+
+        // Si la pestaña esta oculta no tiene dimensiones reales, no calibrar todavia
         if (ancho_css <= 0) {
-            ancho_css = 300;
+            return;
         }
-        canvas.width = ancho_css * escala;
-        canvas.height = alto_css * escala;
+
+        var escala = 1;
+        if (window.devicePixelRatio) {
+            if (window.devicePixelRatio > 1) {
+                escala = window.devicePixelRatio;
+            }
+        }
+
+        var ancho_pixel = Math.round(ancho_css * escala);
+        var alto_pixel = Math.round(alto_css * escala);
+
+        // Si ya tiene el tamano exacto, no tocar para no redibujar innecesariamente
+        if (canvas.width === ancho_pixel && canvas.height === alto_pixel) {
+            return;
+        }
+
+        // Si ya habia trazo previo, respaldar el contenido en un canvas auxiliar
+        var canvasTemporal = null;
+        if (afiliFirmaTrazo) {
+            if (canvas.width > 0 && canvas.height > 0) {
+                canvasTemporal = document.createElement('canvas');
+                canvasTemporal.width = canvas.width;
+                canvasTemporal.height = canvas.height;
+                var ctxTemporal = canvasTemporal.getContext('2d');
+                ctxTemporal.drawImage(canvas, 0, 0);
+            }
+        }
+
+        // Asignar el tamano del buffer de pixeles real
+        canvas.width = ancho_pixel;
+        canvas.height = alto_pixel;
+
         var ctx = canvas.getContext('2d');
         ctx.scale(escala, escala);
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#212529';
+
+        // Restaurar el dibujo escalado al nuevo tamano si habia trazo previo
+        if (canvasTemporal !== null) {
+            ctx.drawImage(canvasTemporal, 0, 0, canvasTemporal.width, canvasTemporal.height, 0, 0, ancho_css, alto_css);
+        }
     }
 
-    // Punto donde empieza el trazo (sirve para mouse y dedo)
+    // Punto donde empieza o continua el trazo (coordenadas normalizadas contra el rectangulo visible)
     function afiliacionFirmaPunto(evento, canvas) {
         var rect = canvas.getBoundingClientRect();
-        var punto_x = 0;
-        var punto_y = 0;
-        if (evento.touches && evento.touches.length > 0) {
-            punto_x = evento.touches[0].clientX - rect.left;
-            punto_y = evento.touches[0].clientY - rect.top;
+        var client_x = 0;
+        var client_y = 0;
+
+        if (evento.touches) {
+            if (evento.touches.length > 0) {
+                client_x = evento.touches[0].clientX;
+                client_y = evento.touches[0].clientY;
+            }
         } else {
-            punto_x = evento.clientX - rect.left;
-            punto_y = evento.clientY - rect.top;
+            client_x = evento.clientX;
+            client_y = evento.clientY;
         }
+
+        var escala = 1;
+        if (window.devicePixelRatio) {
+            if (window.devicePixelRatio > 1) {
+                escala = window.devicePixelRatio;
+            }
+        }
+
+        // Factor de escala entre el rectangulo CSS en pantalla y el espacio logico del canvas
+        var factor_x = 1;
+        if (rect.width > 0) {
+            factor_x = (canvas.width / escala) / rect.width;
+        }
+        var factor_y = 1;
+        if (rect.height > 0) {
+            factor_y = (canvas.height / escala) / rect.height;
+        }
+
+        var punto_x = (client_x - rect.left) * factor_x;
+        var punto_y = (client_y - rect.top) * factor_y;
+
         return { x: punto_x, y: punto_y };
     }
 
@@ -793,6 +870,12 @@ if ($persona_id_sesion > 0) {
         if (!canvas) {
             return;
         }
+
+        // Asegurar que el canvas este calibrado antes del primer trazo
+        if (canvas.width === 0 || canvas.width === 300) {
+            afiliacionFirmaAjustar(canvas);
+        }
+
         if (evento.cancelable) {
             evento.preventDefault();
         }
