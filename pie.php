@@ -64,6 +64,92 @@
     <!-- App js -->
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/app.js"></script>
 
+    <!-- Toggler propio del menu hamburguesa (no depende de app.js) -->
+    <script type="text/javascript">
+        // El app.js de Velzon a veces no ata el clic del hamburguesa.
+        // Este bloque replica ese comportamiento para que el boton
+        // funcione en PC, tablet y movil aunque app.js este caido.
+        (function() {
+            // Evitar doble instalacion si pie.php se incluye dos veces
+            if (window.voleyHamburguesaListo) {
+                return;
+            }
+            window.voleyHamburguesaListo = true;
+
+            // Animar el icono de 3 lineas (igual que hace Velzon)
+            function voleyAnimarIcono() {
+                // Solo animar en pantallas grandes como hace el original
+                if (document.documentElement.clientWidth > 767) {
+                    var icono = document.querySelector('.hamburger-icon');
+                    if (icono) {
+                        icono.classList.toggle('open');
+                    }
+                }
+            }
+
+            // Abrir o cerrar el menu lateral segun el ancho de pantalla
+            function voleyAlternarMenu() {
+                var ancho = document.documentElement.clientWidth;
+                var disposicion = document.documentElement.getAttribute('data-layout');
+                // Solo manejamos la disposicion vertical que usa el sistema
+                if (disposicion !== 'vertical') {
+                    return;
+                }
+                voleyAnimarIcono();
+                if (ancho > 1025) {
+                    // PC grande: alternar entre menu ancho y menu angosto
+                    document.body.classList.remove('vertical-sidebar-enable');
+                    if (document.documentElement.getAttribute('data-sidebar-size') === 'lg') {
+                        document.documentElement.setAttribute('data-sidebar-size', 'sm');
+                    } else {
+                        document.documentElement.setAttribute('data-sidebar-size', 'lg');
+                    }
+                } else if (ancho > 767) {
+                    // Tablet: alternar entre menu angosto y menu oculto
+                    document.body.classList.remove('vertical-sidebar-enable');
+                    if (document.documentElement.getAttribute('data-sidebar-size') === 'sm') {
+                        document.documentElement.setAttribute('data-sidebar-size', '');
+                    } else {
+                        document.documentElement.setAttribute('data-sidebar-size', 'sm');
+                    }
+                } else {
+                    // Movil: mostrar u ocultar el menu sobre la pantalla
+                    document.body.classList.toggle('vertical-sidebar-enable');
+                    document.documentElement.setAttribute('data-sidebar-size', 'lg');
+                }
+            }
+
+            // Cerrar el menu movil cuando se toca el fondo oscuro
+            function voleyCerrarMenuMovil() {
+                document.body.classList.remove('vertical-sidebar-enable');
+            }
+
+            // Escuchar clics en captura para ganarle al handler de app.js.
+            // Si app.js esta vivo hace lo mismo, asi que lo frenamos para
+            // no alternar dos veces y que parezca que no hace nada.
+            document.addEventListener('click', function(evento) {
+                var boton = null;
+                if (evento.target.closest) {
+                    boton = evento.target.closest('#topnav-hamburger-icon');
+                }
+                if (boton) {
+                    evento.stopPropagation();
+                    evento.preventDefault();
+                    voleyAlternarMenu();
+                    return;
+                }
+                var fondo = null;
+                if (evento.target.closest) {
+                    fondo = evento.target.closest('.vertical-overlay');
+                }
+                if (fondo) {
+                    evento.stopPropagation();
+                    voleyCerrarMenuMovil();
+                }
+            }, true);
+        })();
+    </script>
+
     <!-- Toastify -->
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/libs/toastify-js/src/toastify.js"></script>
 

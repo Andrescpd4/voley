@@ -72,16 +72,15 @@ if (!$es_admin && !$es_acudiente) {
 <!-- ============================================================ -->
 <!-- CONTENEDOR PRINCIPAL Y NAVEGACION POR PESTAÑAS (TABS)        -->
 <!-- ============================================================ -->
-<div class="container-fluid">
+<div class="row">
     <div class="row">
         <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <!-- Nav Tabs estilo Velzon (botones: no mueven el scroll como los enlaces) -->
-                    <ul class="nav nav-tabs mb-3" id="afiliacionTabs" role="tablist">
-                        <?php if ($es_acudiente || $es_admin): ?>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link <?php echo !$es_admin ? 'active' : ''; ?>"
+            <div class="">
+                <!-- Nav Tabs estilo Velzon (botones: no mueven el scroll como los enlaces) -->
+                <ul class="nav nav-tabs mb-3" id="afiliacionTabs" role="tablist">
+                    <?php if ($es_acudiente || $es_admin): ?>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link <?php echo !$es_admin ? 'active' : ''; ?>"
                                 id="tab-registro-link"
                                 data-bs-toggle="tab"
                                 data-bs-target="#tab-registro-content"
@@ -154,7 +153,6 @@ if (!$es_admin && !$es_acudiente) {
                         <?php endif; ?>
                     </div>
                 </div>
-            </div>
         </div>
     </div>
 </div>
