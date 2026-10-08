@@ -240,6 +240,26 @@ class Consentimientos extends Base
         echo json_encode($r, JSON_UNESCAPED_UNICODE);
     }
 
+    // 6b. Incrementar version para re-pedir firmas
+    function incrementar_version()
+    {
+        $this->validar_token_simple();
+        if (isset($_POST['id'])) {
+            $id_limpio = intval($_POST['id']);
+        } else {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'ID requerido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $res = $this->helpers->incrementar_version($id_limpio);
+        if ($res['error'] === false) {
+            insertar_bitacora(3, 'Version de consentimiento incrementada', 'ID: ' . $id_limpio . ' a ' . $res['nueva_version']);
+        }
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
     // 7. Subir archivo PDF adjunto
     function subir_archivo()
     {
@@ -256,11 +276,12 @@ class Consentimientos extends Base
             echo json_encode($r, JSON_UNESCAPED_UNICODE);
             return;
         }
-        $res = $this->helpers->subir_archivo('archivo', 'autorizaciones');
+        $res = $this->helpers->subir_archivo('archivo');
         if ($res['error'] === false) {
             $r = array();
             $r['error'] = false;
-            $r['url'] = WEB_ROOT . 'storage/autorizaciones/' . $res['nombre'];
+            $r['msg'] = $res['msg'];
+            $r['url'] = $res['url'];
             echo json_encode($r, JSON_UNESCAPED_UNICODE);
         } else {
             $r = array();

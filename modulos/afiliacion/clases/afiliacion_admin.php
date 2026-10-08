@@ -200,6 +200,30 @@ trait afiliacion_admin
             $solicitud['categoria_nombre'] = '-';
         }
 
+        // 4. Obtener firma del acudiente (si existe) para que el admin la visualice al revisar
+        $acudiente_id = intval($solicitud['acudiente_id']);
+        $firma_fila = $this->_obtener_fila(
+            "SELECT id, fecha_firma, firma_imagen, firma_electronica
+             FROM autorizacion_firmada
+             WHERE acudiente_id = ? AND firma_imagen IS NOT NULL AND firma_imagen != ''
+             ORDER BY fecha_firma DESC",
+            array($acudiente_id)
+        );
+
+        if (!empty($firma_fila) && isset($firma_fila['firma_imagen'])) {
+            $ruta_real = $firma_fila['firma_imagen'];
+            if (file_exists($ruta_real)) {
+                $binario = file_get_contents($ruta_real);
+                if ($binario !== false) {
+                    $solicitud['firma_acudiente'] = array(
+                        'id' => $firma_fila['id'],
+                        'fecha_firma' => $firma_fila['fecha_firma'],
+                        'data_url' => 'data:image/png;base64,' . base64_encode($binario)
+                    );
+                }
+            }
+        }
+
         $this->_success('', $solicitud);
     }
 

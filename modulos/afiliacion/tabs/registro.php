@@ -868,6 +868,76 @@ if ($persona_id_sesion > 0) {
         return true;
     }
 
+    // Cargar una solicitud existente (borrador o devuelta / requiere_info) para editar
+    function afiliacionCargarParaEditar(deportistaId) {
+        afiliacionAjax('obtener_mis_solicitud', { deportista_id: deportistaId }, function(respuesta) {
+            if (respuesta.error) {
+                return;
+            }
+            var d = respuesta.data;
+            if (!d || !d.id) {
+                afiliacionMostrarMsg('No se pudieron cargar los datos de la solicitud', 'error');
+                return;
+            }
+
+            // 1. Limpiar marcas y formulario
+            afiliacionLimpiarErrores();
+            afiliacionFirmaLimpiar();
+
+            // 2. Setear IDs y modo
+            document.getElementById('reg_deportista_id').value = d.id;
+            document.getElementById('reg_modo_guardado').value = 'borrador';
+
+            // 3. Prellenar datos del deportista
+            document.getElementById('reg_dep_nombre1').value = d.nombre1 || '';
+            document.getElementById('reg_dep_nombre2').value = d.nombre2 || '';
+            document.getElementById('reg_dep_apellido1').value = d.apellido1 || '';
+            document.getElementById('reg_dep_apellido2').value = d.apellido2 || '';
+            document.getElementById('reg_dep_tipo_documento').value = d.tipo_documento || 'TI';
+            document.getElementById('reg_dep_identificacion').value = d.identificacion || '';
+            document.getElementById('reg_dep_fecha_nacimiento').value = d.fecha_nacimiento || '';
+            document.getElementById('reg_dep_genero').value = d.genero || 'M';
+            document.getElementById('reg_dep_celular').value = d.celular || '';
+            document.getElementById('reg_dep_correo').value = d.correo || '';
+            document.getElementById('reg_dep_direccion').value = d.direccion || '';
+            document.getElementById('reg_dep_categoria_id').value = d.categoria_id || '';
+            document.getElementById('reg_dep_eps').value = d.eps || '';
+            document.getElementById('reg_dep_rh').value = d.rh || '';
+            document.getElementById('reg_dep_alergias').value = d.alergias || '';
+            document.getElementById('reg_dep_contacto_nombre').value = d.contacto_emergencia_nombre || '';
+            document.getElementById('reg_dep_contacto_telefono').value = d.contacto_emergencia_telefono || '';
+            document.getElementById('reg_dep_observaciones').value = d.observaciones || '';
+
+            // 4. Prellenar datos del acudiente si vienen
+            if (d.acudiente) {
+                var acu = d.acudiente;
+                var campoCel = document.getElementById('reg_acu_celular');
+                if (campoCel && acu.celular) { campoCel.value = acu.celular; }
+                var campoCorreo = document.getElementById('reg_acu_correo');
+                if (campoCorreo && acu.correo) { campoCorreo.value = acu.correo; }
+                var campoDir = document.getElementById('reg_acu_direccion');
+                if (campoDir && acu.direccion) { campoDir.value = acu.direccion; }
+            }
+            if (d.parentesco) {
+                var campoParentesco = document.getElementById('reg_parentesco');
+                if (campoParentesco) { campoParentesco.value = d.parentesco; }
+            }
+
+            // 5. Habilitar boton de documentos
+            document.getElementById('btnAbrirModalDocs').disabled = false;
+            document.getElementById('textoEstadoDocs').innerHTML = '<span class="text-success fw-medium">Borrador cargado. Puede adjuntar o modificar documentos.</span>';
+
+            // 6. Cambiar a la pestaña de Registro
+            var tabLink = document.getElementById('tab-registro-link');
+            if (tabLink) {
+                var tabInstancia = bootstrap.Tab.getOrCreateInstance(tabLink);
+                tabInstancia.show();
+            }
+
+            afiliacionMostrarMsg('Solicitud cargada para edición. Realice los cambios y firme al final para volver a enviar.', 'info');
+        });
+    }
+
     // Limpiar formulario completo para un nuevo registro
     function afiliacionLimpiarFormularioRegistro() {
         document.getElementById('formRegistroAfiliacion').reset();

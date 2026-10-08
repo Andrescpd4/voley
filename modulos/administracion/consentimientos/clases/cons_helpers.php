@@ -130,6 +130,53 @@ class ConsentimientosHelpers
         return true;
     }
 
+    // 6b. Incrementar la versión de un documento para solicitar firma de nuevo
+    // Calcula la siguiente versión (ej: 1.0 -> 1.1, 1.9 -> 2.0) y la guarda.
+    // Al cambiar la versión, todos los usuarios quedan pendientes automáticamente.
+    function incrementar_version($tipo_id)
+    {
+        $id_limpio = intval($tipo_id);
+        $tipo = $this->obtener_tipo($id_limpio);
+        if (empty($tipo)) {
+            return array('error' => true, 'msg' => 'Documento no encontrado');
+        }
+
+        $version_actual = trim($tipo['version']);
+        $nueva_version = $this->_calcular_siguiente_version($version_actual);
+
+        $this->db->update('tipo_autorizacion', array(
+            'version' => $nueva_version
+        ), array('id' => $id_limpio));
+
+        return array(
+            'error' => false,
+            'msg' => 'Se incrementó la versión a ' . $nueva_version . '. Se pedirá la firma a todos los usuarios.',
+            'version_anterior' => $version_actual,
+            'nueva_version' => $nueva_version
+        );
+    }
+
+    // Calcular siguiente versión con formato mayor.menor
+    function _calcular_siguiente_version($version)
+    {
+        $partes = explode('.', $version);
+        if (count($partes) === 2) {
+            $mayor = intval($partes[0]);
+            $menor = intval($partes[1]);
+            $menor = $menor + 1;
+            if ($menor >= 10) {
+                $mayor = $mayor + 1;
+                $menor = 0;
+            }
+            return $mayor . '.' . $menor;
+        } else if (count($partes) === 1) {
+            $mayor = intval($partes[0]);
+            return $mayor . '.1';
+        } else {
+            return $version . '.1';
+        }
+    }
+
     // 7. Armar el WHERE de firmas desde filtros (devuelve texto ya escapado)
     function armar_where_firmas($filtros)
     {
@@ -372,9 +419,67 @@ class ConsentimientosHelpers
         return array('error' => false, 'msg' => 'Consentimiento registrado correctamente.');
     }
 
-    // 12. Subir archivo adjunto (PDF) a storage/autorizaciones/
-    function subir_archivo($elemento, $carpeta = 'autorizaciones')
+    // 12. Subir archivo adjunto (PDF) a storage/autorizaciones/ de forma segura
+    // Valida extension, MIME real finfo y limite de 10 MB
+    function subir_archivo($elemento)
     {
-        return $this->db->SubirArchivo($elemento, 10, 'pdf', $carpeta);
+        if (!isset($_FILES[$elemento])) {
+            return array('error' => true, 'msg' => 'No se recibió ningún archivo');
+        }
+        $archivo = $_FILES[$elemento];
+
+        if (!isset($archivo['error']) || $archivo['error'] !== UPLOAD_ERR_OK) {
+            return array('error' => true, 'msg' => 'Error al subir el archivo (código ' . $archivo['error'] . ')');
+        }
+
+        // Límite de 10 MB
+        $max_bytes = 10 * 1024 * 1024;
+        if ($archivo['size'] > $max_bytes) {
+            return array('error' => true, 'msg' => 'El archivo excede el tamaño máximo permitido de 10 MB');
+        }
+
+        // Validar extensión
+        $nombre_original = $archivo['name'];
+        $extension = strtolower(pathinfo($nombre_original, PATHINFO_EXTENSION));
+        if ($extension !== 'pdf') {
+            return array('error' => true, 'msg' => 'Solo se permiten archivos en formato PDF');
+        }
+
+        // Validar MIME real con finfo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_real = finfo_file($finfo, $archivo['tmp_name']);
+        finfo_close($finfo);
+
+        $mimes_validos = array('application/pdf', 'application/x-pdf');
+        if (!in_array($mime_real, $mimes_validos)) {
+            return array('error' => true, 'msg' => 'El contenido del archivo no corresponde a un PDF válido');
+        }
+
+        // Crear carpeta destino si no existe
+        $carpeta_destino = 'storage/autorizaciones/';
+        if (!is_dir($carpeta_destino)) {
+            mkdir($carpeta_destino, 0755, true);
+        }
+
+        // Nombre único generado en el servidor
+        $nombre_unico = 'doc_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.pdf';
+        $ruta_final = $carpeta_destino . $nombre_unico;
+
+        if (is_uploaded_file($archivo['tmp_name'])) {
+            $movido = move_uploaded_file($archivo['tmp_name'], $ruta_final);
+        } else {
+            $movido = copy($archivo['tmp_name'], $ruta_final);
+        }
+
+        if (!$movido) {
+            return array('error' => true, 'msg' => 'No se pudo guardar el archivo en el servidor');
+        }
+
+        return array(
+            'error' => false,
+            'msg' => 'Archivo subido correctamente',
+            'nombre' => $nombre_unico,
+            'url' => WEB_ROOT . 'storage/autorizaciones/' . $nombre_unico
+        );
     }
 }

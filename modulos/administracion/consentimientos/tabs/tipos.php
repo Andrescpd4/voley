@@ -189,10 +189,13 @@ function consTiposCrearFila(item) {
         <td>${popupTxt}</td>
         <td>${badgeActivo}</td>
         <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-primary accion-agregar" onclick="consTiposEditar(${idNum})" title="Editar">
+            <button type="button" class="btn btn-sm btn-outline-warning accion-guardar_tipo" onclick="consTiposRePedir(${idNum}, '${version}')" title="Solicitar firma de nuevo (sube versión)">
+                <i class="ri-refresh-line"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary accion-guardar_tipo" onclick="consTiposEditar(${idNum})" title="Editar">
                 <i class="ri-pencil-line"></i>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-danger accion-eliminar" onclick="consTiposEliminar(${idNum})" title="Desactivar">
+            <button type="button" class="btn btn-sm btn-outline-danger accion-eliminar_tipo" onclick="consTiposEliminar(${idNum})" title="Desactivar">
                 <i class="ri-delete-bin-line"></i>
             </button>
         </td>
@@ -294,6 +297,33 @@ function consTiposGuardar() {
             consTiposModalInstancia.hide();
         }
         consTiposCargar();
+    });
+}
+
+// Pedir confirmacion y subir la version para solicitar firma a todos
+function consTiposRePedir(tipoId, versionActual) {
+    if (typeof Swal === 'undefined') {
+        return;
+    }
+    Swal.fire({
+        title: '¿Solicitar firma de nuevo?',
+        text: 'Se incrementará la versión del documento y volverá a aparecer como pendiente a todos los usuarios.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, incrementar versión',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#f7b84b',
+        cancelButtonColor: '#405189'
+    }).then(function(resultado) {
+        if (resultado.isConfirmed) {
+            consAjax('incrementar_version', { id: tipoId }, function(respuesta) {
+                if (respuesta.error) {
+                    return;
+                }
+                consMostrarMsg(respuesta.msg, 'success');
+                consTiposCargar();
+            });
+        }
     });
 }
 

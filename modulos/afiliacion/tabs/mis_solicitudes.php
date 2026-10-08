@@ -125,6 +125,20 @@ function afiliacionCrearFilaMiSolicitud(item) {
     var fecha = afiliacionEsc(item.fecha_solicitud || item.created_at || '-');
     var obs = afiliacionEsc(item.observaciones || 'Sin observaciones');
     var depId = item.deportista_id;
+    var estado = item.estado;
+
+    // Boton de corregir / editar solo si es borrador o devuelta (requiere_info)
+    var btnEditar = '';
+    if (estado === 'borrador' || estado === 'requiere_info') {
+        var textoBoton = 'Corregir';
+        if (estado === 'borrador') {
+            textoBoton = 'Completar';
+        }
+        btnEditar = `
+        <button type="button" class="btn btn-sm btn-primary btn-afili-accion ms-1" onclick="afiliacionCargarParaEditar(${depId})" title="${textoBoton} solicitud" aria-label="${textoBoton} solicitud de ${nombre}">
+            <i class="ri-edit-line me-1"></i> ${textoBoton}
+        </button>`;
+    }
 
     return `
     <tr>
@@ -134,10 +148,11 @@ function afiliacionCrearFilaMiSolicitud(item) {
         <td style="min-width: 120px;">${barraProgreso}</td>
         <td>${fecha}</td>
         <td><small class="text-muted">${obs}</small></td>
-        <td class="text-center">
+        <td class="text-center text-nowrap">
             <button type="button" class="btn btn-sm btn-outline-info btn-afili-accion" onclick="afiliacionVerMiDetalle(${depId})" title="Ver ficha completa" aria-label="Ver ficha completa de ${nombre}">
                 <i class="ri-eye-line"></i> Ver
             </button>
+            ${btnEditar}
         </td>
     </tr>`;
 }

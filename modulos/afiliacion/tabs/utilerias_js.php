@@ -309,6 +309,12 @@ function afiliacionNormalizarFicha(d) {
         ficha.documentos = d.documentos;
     }
 
+    // Firma del acudiente (solo llega en la vista admin)
+    ficha.firma_acudiente = null;
+    if (d.firma_acudiente && typeof d.firma_acudiente === 'object') {
+        ficha.firma_acudiente = d.firma_acudiente;
+    }
+
     return ficha;
 }
 
@@ -410,6 +416,35 @@ function afiliacionArmarFichaHtml(ficha, es_admin) {
         </div>`;
     }
 
+    // Bloque de firma del acudiente (solo visible para el admin revisor)
+    var bloqueFirmaAdmin = '';
+    if (es_admin && ficha.firma_acudiente && ficha.firma_acudiente.data_url) {
+        var firmaDataUrl = ficha.firma_acudiente.data_url;
+        var firmaFecha = afiliacionEsc(ficha.firma_acudiente.fecha_firma || '');
+        bloqueFirmaAdmin = `
+        <div class="col-12">
+            <div class="card border">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h6 class="mb-0 text-primary">
+                        <i class="ri-pen-nib-line me-1"></i> Firma Manuscrita del Acudiente
+                    </h6>
+                    <small class="text-muted">Fecha de firma: ${firmaFecha}</small>
+                </div>
+                <div class="card-body text-center bg-light-subtle">
+                    <img src="${firmaDataUrl}" class="img-fluid border rounded bg-white p-2" style="max-height: 160px;" alt="Firma del acudiente">
+                    <p class="text-muted small mt-2 mb-0">Esta firma respalda la aceptación de las políticas del club y el registro de la deportista.</p>
+                </div>
+            </div>
+        </div>`;
+    } else if (es_admin) {
+        bloqueFirmaAdmin = `
+        <div class="col-12">
+            <div class="alert alert-warning mb-0">
+                <i class="ri-alert-line me-1"></i> <strong>Sin firma registrada:</strong> esta solicitud aún no cuenta con firma electrónica del acudiente.
+            </div>
+        </div>`;
+    }
+
     return `
     <div class="row g-3">
         <div class="col-12 d-flex justify-content-between align-items-center pb-2 border-bottom">
@@ -471,6 +506,8 @@ function afiliacionArmarFichaHtml(ficha, es_admin) {
                 </div>
             </div>
         </div>
+
+        ${bloqueFirmaAdmin}
 
         ${bloqueFinal}
     </div>`;
