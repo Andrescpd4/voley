@@ -447,7 +447,7 @@ function afiliacionArmarFichaHtml(ficha, es_admin) {
 
     return `
     <div class="row g-3">
-        <div class="col-12 d-flex justify-content-between align-items-center pb-2 border-bottom">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 pb-2 border-bottom">
             <div>
                 <h4 class="mb-0 text-primary">${depNombre}</h4>
                 <small class="text-muted">Documento: ${depDoc} &middot; Solicitado: ${fechaSol}</small>

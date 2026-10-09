@@ -11,8 +11,6 @@ if (!$es_admin) {
 ?>
 
 <!-- ===== TAB 3: GESTION DE AFILIACIONES (ADMINISTRACION) ===== -->
-<div class="row">
-    <div class="col-12">
         <!-- ============================================================ -->
         <!-- FILTROS ACCORDION (Estilo lavado_cubetas)                   -->
         <!-- ============================================================ -->
@@ -67,10 +65,10 @@ if (!$es_admin) {
         <!-- ============================================================ -->
         <!-- TABLA PRINCIPAL DE GESTION                                   -->
         <!-- ============================================================ -->
-        <div class="card border">
+        <div class="card border d-none d-md-block">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle mb-0" id="tablaGestionAfiliaciones" style="width: 100%;">
+                    <table class="table table-striped table-hover align-middle mb-0 w-100" id="tablaGestionAfiliaciones">
                         <thead class="afili-encabezado-oscuro">
                             <tr>
                                 <th style="width: 40px;">#</th>
@@ -90,8 +88,9 @@ if (!$es_admin) {
                 </div>
             </div>
         </div>
-    </div>
-</div>
+
+<!-- Contenedor de tarjetas para movil (la tabla solo se ve en md o mas) -->
+<div id="contenedorGestionMovil" class="d-md-none" aria-live="polite"></div>
 
 <!-- ============================================================ -->
 <!-- MODAL: VER FICHA COMPLETA (ADMIN)                            -->
@@ -238,7 +237,71 @@ jQuery(document).ready(function($) {
         scrollX: true,
         order: [[6, 'desc']]
     });
+
+    // Pintar tarjetas en movil con los mismos datos que trae la tabla (sin otra peticion)
+    tablaGestionDT.on('preXhr', function() {
+        var cargando = document.getElementById('contenedorGestionMovil');
+        if (cargando) {
+            cargando.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Cargando solicitudes...</span></div>';
+        }
+    });
+    tablaGestionDT.on('xhr', function(e, ajustes, json) {
+        var lista = [];
+        if (json && json.data) {
+            lista = json.data;
+        }
+        afiliacionGestionPintarMovil(lista);
+    });
 });
+
+// Pintar la lista de tarjetas de gestion para pantallas pequenas
+function afiliacionGestionPintarMovil(lista) {
+    var contenedorMovil = document.getElementById('contenedorGestionMovil');
+    if (!contenedorMovil) {
+        return;
+    }
+    if (lista.length === 0) {
+        contenedorMovil.innerHTML = '<div class="alert alert-info"><i class="ri-information-line me-1"></i>No hay solicitudes con esos filtros.</div>';
+        return;
+    }
+    var htmlMovil = '';
+    for (var i = 0; i < lista.length; i++) {
+        htmlMovil += afiliacionCrearCardGestion(lista[i]);
+    }
+    contenedorMovil.innerHTML = htmlMovil;
+}
+
+// Crear una tarjeta de gestion para pantallas pequenas (reusa los botones del backend)
+function afiliacionCrearCardGestion(item) {
+    var nombre = afiliacionEsc(item.deportista_nombre);
+    var doc = afiliacionEsc(item.deportista_identificacion);
+    var acudiente = afiliacionEsc(item.acudiente_nombre);
+    var badgeEstado = afiliacionBadgeEstado(item.estado);
+    var barraProgreso = afiliacionBarraProgreso(item.progreso);
+    var fecha = afiliacionEsc(item.fecha_solicitud || '-');
+    var btnVer = item.btn_ver || '';
+    var btnEst = item.btn_estado || '';
+    var btnEli = item.btn_eliminar || '';
+    return `
+    <div class="card border mb-2">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <strong>${nombre}</strong>
+                    <small class="text-muted d-block">Doc: ${doc} &middot; Acudiente: ${acudiente}</small>
+                </div>
+                <span>${badgeEstado}</span>
+            </div>
+            <div class="mb-2">${barraProgreso}</div>
+            <small class="text-muted d-block mb-2">Solicitud: ${fecha}</small>
+            <div class="d-flex gap-2 flex-wrap">
+                ${btnVer}
+                ${btnEst}
+                ${btnEli}
+            </div>
+        </div>
+    </div>`;
+}
 
 // Buscar con filtros
 function afiliacionGestionBuscar() {

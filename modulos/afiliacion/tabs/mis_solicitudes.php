@@ -22,7 +22,7 @@ if (!$es_acudiente && !$es_admin) {
             <i class="ri-refresh-line me-1"></i> Actualizar
         </button>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0 d-none d-md-block">
         <div class="table-responsive">
             <table class="table table-striped table-hover align-middle mb-0" id="tablaMisSolicitudes">
                 <thead class="table-light">
@@ -48,6 +48,9 @@ if (!$es_acudiente && !$es_admin) {
         </div>
     </div>
 </div>
+
+<!-- Contenedor de tarjetas para movil (la tabla solo se ve en md o mas) -->
+<div id="contenedorMisSolicitudesMovil" class="d-md-none" aria-live="polite"></div>
 
 <!-- ============================================================ -->
 <!-- MODAL: VER DETALLE DE MI SOLICITUD                           -->
@@ -90,28 +93,35 @@ jQuery(document).ready(function($) {
     afiliacionMisSolicitudesCargarDatos();
 });
 
-// Cargar la lista de solicitudes desde el backend
+// Cargar la lista de solicitudes desde el backend (tabla en PC, tarjetas en movil)
 function afiliacionMisSolicitudesCargarDatos() {
     var tbody = document.getElementById('tbodyMisSolicitudes');
-    if (!tbody) {
+    var contenedorMovil = document.getElementById('contenedorMisSolicitudesMovil');
+    if (!tbody || !contenedorMovil) {
         return;
     }
 
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Cargando solicitudes...</span></td></tr>';
+    contenedorMovil.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary"></span><span class="ms-2">Cargando solicitudes...</span></div>';
 
     afiliacionAjax('listar_mis_solicitudes', {}, function(respuesta) {
         if (!respuesta.error && respuesta.rows) {
             var lista = respuesta.rows;
             if (lista.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="ri-information-line fs-3 d-block mb-1"></i>Aun no ha registrado solicitudes de afiliacion. Puede hacerlo en la pestana <strong>Registro</strong>.</td></tr>';
+                contenedorMovil.innerHTML = '<div class="alert alert-info"><i class="ri-information-line me-1"></i>Aun no ha registrado solicitudes de afiliacion. Puede hacerlo en la pestana <strong>Registro</strong>.</div>';
                 return;
             }
 
+            // Armar la tabla de PC y las tarjetas de movil con los mismos datos
             var html = '';
+            var htmlMovil = '';
             for (var i = 0; i < lista.length; i++) {
                 html += afiliacionCrearFilaMiSolicitud(lista[i]);
+                htmlMovil += afiliacionCrearCardMiSolicitud(lista[i]);
             }
             tbody.innerHTML = html;
+            contenedorMovil.innerHTML = htmlMovil;
         }
     });
 }
@@ -155,6 +165,49 @@ function afiliacionCrearFilaMiSolicitud(item) {
             ${btnEditar}
         </td>
     </tr>`;
+}
+
+// Crear una tarjeta de solicitud para pantallas pequenas (sin scroll lateral)
+function afiliacionCrearCardMiSolicitud(item) {
+    var nombre = afiliacionEsc(item.deportista_nombre);
+    var badgeEstado = afiliacionBadgeEstado(item.estado);
+    var barraProgreso = afiliacionBarraProgreso(item.porcentaje_completado);
+    var fecha = afiliacionEsc(item.fecha_solicitud || item.created_at || '-');
+    var obs = afiliacionEsc(item.observaciones || 'Sin observaciones');
+    var depId = item.deportista_id;
+    var estado = item.estado;
+
+    // Boton de corregir / editar solo si es borrador o devuelta (requiere_info)
+    var btnEditar = '';
+    if (estado === 'borrador' || estado === 'requiere_info') {
+        var textoBoton = 'Corregir';
+        if (estado === 'borrador') {
+            textoBoton = 'Completar';
+        }
+        btnEditar = `
+        <button type="button" class="btn btn-sm btn-primary btn-afili-accion" onclick="afiliacionCargarParaEditar(${depId})" title="${textoBoton} solicitud" aria-label="${textoBoton} solicitud de ${nombre}">
+            <i class="ri-edit-line me-1"></i> ${textoBoton}
+        </button>`;
+    }
+
+    return `
+    <div class="card border mb-2">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <strong>${nombre}</strong>
+                <span>${badgeEstado}</span>
+            </div>
+            <div class="mb-2">${barraProgreso}</div>
+            <small class="text-muted d-block">Solicitud: ${fecha}</small>
+            <small class="text-muted d-block mb-2">${obs}</small>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm btn-outline-info btn-afili-accion" onclick="afiliacionVerMiDetalle(${depId})" title="Ver ficha completa" aria-label="Ver ficha completa de ${nombre}">
+                    <i class="ri-eye-line me-1"></i> Ver
+                </button>
+                ${btnEditar}
+            </div>
+        </div>
+    </div>`;
 }
 
 // Ver detalle completo de una solicitud en modal

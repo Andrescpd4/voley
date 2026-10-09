@@ -26,7 +26,7 @@ if (!$es_admin && !$es_acudiente) {
 <!-- SweetAlert2 y Toastify NO se incluyen aqui: ya son globales -->
 <!-- (cabeza.php y pie.php los cargan en local). -->
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css">
-<script type="text/javascript" src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+<script type="text/javascript" defer src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
 
 <style type="text/css">
 /* Tokens del modulo Afiliaciones: un solo lugar para los colores */
@@ -53,6 +53,10 @@ if (!$es_admin && !$es_acudiente) {
     align-items: center;
     justify-content: center;
 }
+/* Boton Enviar con texto oscuro: el blanco sobre verde exito no se lee */
+.afili-btn-enviar {
+    color: var(--vz-dark);
+}
 /* Campos marcados como invalidos en la validacion de envio */
 .afili-invalido {
     border-color: var(--vz-danger);
@@ -61,6 +65,47 @@ if (!$es_admin && !$es_acudiente) {
     color: var(--vz-danger);
     font-size: 0.875em;
     margin-top: 0.25rem;
+}
+/* En movil: cards del formulario mas compactas y botonera apilada */
+@media (max-width: 767.98px) {
+    /* Quitar el padding de nuestra columna para pegar las cards al borde */
+    #afiliacionModulo > .col-12 {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    /* Cards a borde completo estilo app (sin laterales ni redondez) */
+    #afiliacionModulo .card {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+    #formRegistroAfiliacion > .card {
+        margin-bottom: 0.5rem;
+    }
+    #formRegistroAfiliacion > .card > .card-body {
+        padding: 0.75rem;
+    }
+    /* Grid de campos mas denso en movil (ahorra 8px por lado) */
+    #formRegistroAfiliacion .row.g-3 {
+        --vz-gutter-x: 0.5rem;
+        --vz-gutter-y: 0.5rem;
+    }
+    .afili-botonera .btn {
+        flex: 1 1 100%;
+    }
+    /* Radios de parentesco 2 por fila en movil */
+    #formRegistroAfiliacion .form-check {
+        flex: 1 1 45%;
+    }
+    /* Tarjetas de solicitudes y gestion mas compactas en movil */
+    #contenedorMisSolicitudesMovil .card-body,
+    #contenedorGestionMovil .card-body {
+        padding: 0.75rem;
+    }
+    /* Firma mas alta en movil para firmar con el dedo */
+    #firmaCanvas {
+        height: 220px;
+    }
 }
 </style>
 
@@ -72,10 +117,8 @@ if (!$es_admin && !$es_acudiente) {
 <!-- ============================================================ -->
 <!-- CONTENEDOR PRINCIPAL Y NAVEGACION POR PESTAÑAS (TABS)        -->
 <!-- ============================================================ -->
-<div class="row">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="">
+<div class="row" id="afiliacionModulo">
+    <div class="col-12">
                 <!-- Nav Tabs estilo Velzon (botones: no mueven el scroll como los enlaces) -->
                 <ul class="nav nav-tabs mb-3" id="afiliacionTabs" role="tablist">
                     <?php if ($es_acudiente || $es_admin): ?>
@@ -152,8 +195,6 @@ if (!$es_admin && !$es_acudiente) {
                         </div>
                         <?php endif; ?>
                     </div>
-                </div>
-        </div>
     </div>
 </div>
 

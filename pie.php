@@ -117,12 +117,36 @@
                     document.body.classList.toggle('vertical-sidebar-enable');
                     document.documentElement.setAttribute('data-sidebar-size', 'lg');
                 }
+
+                // Sincronizar estado para lectores de pantalla
+                var botonMenu = document.getElementById('topnav-hamburger-icon');
+                if (botonMenu) {
+                    var menuVisible = false;
+                    if (ancho > 767) {
+                        menuVisible = document.documentElement.getAttribute('data-sidebar-size') === 'lg';
+                    } else {
+                        menuVisible = document.body.classList.contains('vertical-sidebar-enable');
+                    }
+                    var textoExpandido = 'false';
+                    if (menuVisible) {
+                        textoExpandido = 'true';
+                    }
+                    botonMenu.setAttribute('aria-expanded', textoExpandido);
+                }
             }
 
             // Cerrar el menu movil cuando se toca el fondo oscuro
             function voleyCerrarMenuMovil() {
                 document.body.classList.remove('vertical-sidebar-enable');
             }
+
+            // Si se agranda a PC o tablet con el menu movil abierto, cerrarlo
+            // para que la clase no trabe el layout de escritorio al rotar o redimensionar
+            window.addEventListener('resize', function() {
+                if (document.documentElement.clientWidth > 767) {
+                    document.body.classList.remove('vertical-sidebar-enable');
+                }
+            });
 
             // Escuchar clics en captura para ganarle al handler de app.js.
             // Si app.js esta vivo hace lo mismo, asi que lo frenamos para

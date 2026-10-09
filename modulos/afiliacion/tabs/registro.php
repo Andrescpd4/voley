@@ -31,8 +31,6 @@ if ($persona_id_sesion > 0) {
 </style>
 
 <!-- ===== FORMULARIO DE REGISTRO DE AFILIACION VOLEY+ ===== -->
-<div class="row">
-    <div class="col-lg-12">
         <form id="formRegistroAfiliacion" novalidate>
             <!-- ID oculto si se esta editando un borrador existente -->
             <input type="hidden" id="reg_deportista_id" name="deportista_id" value="0">
@@ -193,7 +191,7 @@ if ($persona_id_sesion > 0) {
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-medium">Parentesco con el Deportista <span class="text-danger">*</span></label>
-                            <div class="d-flex gap-3 pt-2">
+                            <div class="d-flex flex-wrap gap-2 gap-md-3 pt-2">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="parentesco" id="parentesco_padre" value="padre" checked>
                                     <label class="form-check-label" for="parentesco_padre">Padre</label>
@@ -320,22 +318,20 @@ if ($persona_id_sesion > 0) {
                     <!-- ============================================================ -->
                     <div class="card mb-4 border-0">
                         <div class="card-body p-0">
-                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                            <div class="d-flex justify-content-md-end gap-2 flex-wrap afili-botonera">
                                 <button type="button" class="btn btn-secondary" onclick="afiliacionLimpiarFormularioRegistro()">
                                     <i class="ri-eraser-line me-1"></i> Limpiar Formulario
                                 </button>
                                 <button type="button" class="btn btn-outline-primary" id="btnGuardarBorrador" onclick="afiliacionGuardarRegistro('borrador')">
                                     <i class="ri-save-line me-1"></i> Guardar Borrador
                                 </button>
-                                <button type="button" class="btn btn-success text-dark" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
+                                <button type="button" class="btn btn-success afili-btn-enviar" id="btnEnviarRevision" onclick="afiliacionGuardarRegistro('enviar')">
                                     <i class="ri-send-plane-line me-1"></i> Enviar a Revision
                                 </button>
                             </div>
                         </div>
                     </div>
                 </form>
-    </div>
-</div>
 
 <!-- ============================================================ -->
 <!-- MODAL: DOCUMENTOS REQUERIDOS (LISTA INDIVIDUAL)              -->
@@ -771,11 +767,14 @@ if ($persona_id_sesion > 0) {
         });
     }
 
-    // Ajustar el canvas al ancho visible real con nitidez en pantallas HD
+    // Ajustar el canvas al ancho y alto visible real con nitidez en pantallas HD
     // Si ya habia dibujo previo, lo copia en memoria y lo escala para conservarlo
     function afiliacionFirmaAjustar(canvas) {
         var ancho_css = canvas.clientWidth;
-        var alto_css = 180;
+        var alto_css = canvas.clientHeight;
+        if (alto_css <= 0) {
+            alto_css = 180;
+        }
 
         // Si la pestaña esta oculta no tiene dimensiones reales, no calibrar todavia
         if (ancho_css <= 0) {
