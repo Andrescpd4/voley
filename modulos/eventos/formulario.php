@@ -206,6 +206,18 @@ function eveFormatearFecha(fecha_iso) {
                                 <i class="ri-team-line me-1"></i> Convocatorias
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                id="tab-autorizaciones-link"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-autorizaciones-content"
+                                type="button"
+                                role="tab"
+                                aria-controls="tab-autorizaciones-content"
+                                aria-selected="false">
+                                <i class="ri-shield-check-line me-1"></i> Autorizaciones
+                            </button>
+                        </li>
                     </ul>
 
                     <!-- Contenido de las pestanas -->
@@ -221,6 +233,12 @@ function eveFormatearFecha(fecha_iso) {
                              role="tabpanel"
                              aria-labelledby="tab-convocadas-link">
                             <?php include_once 'tabs/convocadas.php'; ?>
+                        </div>
+                        <div class="tab-pane fade"
+                             id="tab-autorizaciones-content"
+                             role="tabpanel"
+                             aria-labelledby="tab-autorizaciones-link">
+                            <?php include_once 'tabs/autorizaciones.php'; ?>
                         </div>
                     </div>
                 </div>

@@ -328,6 +328,7 @@ class EventosHelpers
 
         $total_agregadas = 0;
         $total_reactivadas = 0;
+        $ids_para_avisar = array();
 
         for ($i = 0; $i < count($deportista_ids); $i++) {
             $dep_id = intval($deportista_ids[$i]);
@@ -342,6 +343,7 @@ class EventosHelpers
                     if ($conv_activa === 0) {
                         $this->db->update('evento_convocada', array('activo' => 1, 'estado' => 'convocada'), array('id' => $conv_id));
                         $total_reactivadas = $total_reactivadas + 1;
+                        $ids_para_avisar[] = $dep_id;
                     }
                 } else {
                     $nuevo_registro = array(
@@ -353,12 +355,16 @@ class EventosHelpers
                     );
                     $this->db->insert('evento_convocada', $nuevo_registro);
                     $total_agregadas = $total_agregadas + 1;
+                    $ids_para_avisar[] = $dep_id;
                 }
             }
         }
 
         $suma_total = $total_agregadas + $total_reactivadas;
         insertar_bitacora(1, 'Convocar deportistas', 'Evento id: ' . $id_evento . ' - Total convocadas: ' . $suma_total);
+
+        // Avisar en la campana a los acudientes (nuevas y reactivadas)
+        $this->notificar_convocatoria($id_evento, $ids_para_avisar);
 
         return array(
             'error' => false,
@@ -407,5 +413,142 @@ class EventosHelpers
         $this->db->update('evento_convocada', $datos_update, array('id' => $id_limpio));
         insertar_bitacora(3, 'Cambiar estado convocatoria', 'Convocatoria id: ' . $id_limpio . ' - Nuevo estado: ' . $nuevo_estado);
         return array('error' => false, 'msg' => 'Estado actualizado correctamente.');
+    }
+
+    // 11. Matriz de autorizaciones de un evento (una fila por deportista convocada)
+    // Respuesta: autoriza 1 = Autorizo, 0 = No autorizo, sin fila = Pendiente.
+    function listar_autorizaciones_evento($evento_id)
+    {
+        $id_evento = intval($evento_id);
+        if ($id_evento <= 0) {
+            return array();
+        }
+
+        $sql = "SELECT ec.id AS convocada_id,
+                       ec.estado AS estado_convocada,
+                       d.id AS deportista_id,
+                       CONCAT_WS(' ', pdep.nombre1, pdep.apellido1) AS deportista_nombre,
+                       pdep.identificacion AS deportista_documento,
+                       dap.acudiente_id AS acudiente_id,
+                       CONCAT_WS(' ', pac.nombre1, pac.apellido1) AS acudiente_nombre,
+                       e.requiere_autorizacion AS requiere_autorizacion,
+                       ae.id AS respuesta_id,
+                       ae.autoriza AS autoriza,
+                       ae.fecha_respuesta AS fecha_respuesta,
+                       ae.firma_imagen AS firma_imagen
+                FROM evento_convocada ec
+                INNER JOIN evento e ON e.id = ec.evento_id
+                INNER JOIN deportista d ON d.id = ec.deportista_id
+                INNER JOIN persona pdep ON pdep.id = d.persona_id
+                LEFT JOIN deportista_acudiente dap ON dap.deportista_id = d.id AND dap.es_principal = 1
+                LEFT JOIN persona pac ON pac.id = dap.acudiente_id
+                LEFT JOIN autorizacion_evento ae ON ae.id = (
+                    SELECT MAX(x.id) FROM autorizacion_evento x
+                    WHERE x.evento_id = ec.evento_id AND x.deportista_id = ec.deportista_id
+                )
+                WHERE ec.evento_id = " . $id_evento . " AND ec.activo = 1
+                ORDER BY pdep.apellido1 ASC, pdep.nombre1 ASC";
+
+        $filas = $this->db->select_all($sql);
+        if (!is_array($filas)) {
+            return array();
+        }
+
+        // Marcar si la respuesta trae imagen de firma guardada
+        for ($i = 0; $i < count($filas); $i++) {
+            $tiene_firma = false;
+            if (isset($filas[$i]['firma_imagen'])) {
+                if ($filas[$i]['firma_imagen'] !== '' && $filas[$i]['firma_imagen'] !== null) {
+                    $tiene_firma = true;
+                }
+            }
+            if ($tiene_firma) {
+                $filas[$i]['tiene_firma'] = 1;
+            } else {
+                $filas[$i]['tiene_firma'] = 0;
+            }
+            // No exponer la ruta del archivo al navegador
+            $filas[$i]['firma_imagen'] = '';
+        }
+        return $filas;
+    }
+
+    // 12. Avisar en la campana a los acudientes de las deportistas convocadas
+    function notificar_convocatoria($evento_id, $deportista_ids)
+    {
+        $id_evento = intval($evento_id);
+        if ($id_evento <= 0) {
+            return 0;
+        }
+        if (!is_array($deportista_ids)) {
+            return 0;
+        }
+        if (count($deportista_ids) === 0) {
+            return 0;
+        }
+
+        $evento = $this->obtener_evento($id_evento);
+        $nombre_evento = 'un evento';
+        if (is_array($evento)) {
+            if (isset($evento['nombre'])) {
+                if ($evento['nombre'] !== '') {
+                    $nombre_evento = $evento['nombre'];
+                }
+            }
+        }
+        $titulo_aviso = 'Nueva convocatoria';
+        $texto_aviso = 'Tu deportista fue convocada a ' . $nombre_evento . '. Revisa y responde en Autorizaciones de eventos.';
+
+        $total_avisos = 0;
+        for ($i = 0; $i < count($deportista_ids); $i++) {
+            $dep_id = intval($deportista_ids[$i]);
+            if ($dep_id <= 0) {
+                continue;
+            }
+
+            // Acudiente principal; si no hay, el primer vinculado
+            $sql_acu = "SELECT acudiente_id FROM deportista_acudiente
+                        WHERE deportista_id = " . $dep_id . "
+                        ORDER BY es_principal DESC, id ASC";
+            $fila_acu = $this->db->select_row($sql_acu);
+            $acudiente_id = 0;
+            if (is_array($fila_acu)) {
+                if (isset($fila_acu['acudiente_id'])) {
+                    $acudiente_id = intval($fila_acu['acudiente_id']);
+                }
+            }
+            if ($acudiente_id <= 0) {
+                continue;
+            }
+
+            // No duplicar avisos pendientes del mismo evento para el mismo acudiente
+            $titulo_esc = $this->db->escape_string($titulo_aviso);
+            $sql_duplo = "SELECT id FROM notificaciones
+                          WHERE persona_id = " . $acudiente_id . "
+                          AND titulo = '" . $titulo_esc . "'
+                          AND mensaje LIKE '%" . $this->db->escape_string($nombre_evento) . "%'
+                          AND leida = 0";
+            $existe = $this->db->select_row($sql_duplo);
+            $ya_avisado = false;
+            if (is_array($existe)) {
+                if (isset($existe['id'])) {
+                    $ya_avisado = true;
+                }
+            }
+            if ($ya_avisado) {
+                continue;
+            }
+
+            $aviso = array(
+                'persona_id' => $acudiente_id,
+                'titulo' => $titulo_aviso,
+                'mensaje' => $texto_aviso,
+                'url' => 'inicio',
+                'leida' => 0
+            );
+            $this->db->insert('notificaciones', $aviso);
+            $total_avisos = $total_avisos + 1;
+        }
+        return $total_avisos;
     }
 }

@@ -355,6 +355,114 @@ class Eventos extends Base
         $resultado = $this->helpers->cambiar_estado_convocada($convocada_id, $estado, $observaciones);
         echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
     }
+
+    // 13. Matriz de autorizaciones de un evento (lectura para admin y entrenador)
+    function listar_autorizaciones()
+    {
+        $this->validar_token_simple();
+
+        if (isset($_POST['evento_id'])) {
+            $evento_id = intval($_POST['evento_id']);
+        } else {
+            $evento_id = 0;
+        }
+
+        if ($evento_id <= 0) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'ID de evento requerido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $filas = $this->helpers->listar_autorizaciones_evento($evento_id);
+        $r = array();
+        $r['error'] = false;
+        $r['data'] = $filas;
+        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+    }
+
+    // 14. Ver la imagen de firma de una respuesta (permiso ver_firma_evento)
+    // Devuelve dataURL en JSON: el PNG nunca tiene URL directa.
+    function ver_firma_evento()
+    {
+        $this->validar_token_simple();
+
+        if (isset($_POST['id'])) {
+            $respuesta_id = intval($_POST['id']);
+        } else {
+            $respuesta_id = 0;
+        }
+
+        if ($respuesta_id <= 0) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'ID requerido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $sql_firma = "SELECT firma_imagen FROM autorizacion_evento WHERE id = " . $respuesta_id;
+        $fila = $this->db->select_row($sql_firma);
+
+        if (!is_array($fila)) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Respuesta no encontrada.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        if (!isset($fila['firma_imagen'])) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Esta respuesta no tiene imagen guardada.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $ruta_guardada = $fila['firma_imagen'];
+        if ($ruta_guardada === '' || $ruta_guardada === null) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Esta respuesta no tiene imagen guardada.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Solo permitir archivos dentro de storage/firmas/ con extension png
+        $nombre_base = basename($ruta_guardada);
+        if (substr($nombre_base, -4) !== '.png') {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Archivo de firma no valido.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $ruta_real = 'storage/firmas/' . $nombre_base;
+        if (!file_exists($ruta_real)) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'Archivo de firma no encontrado.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $binario = file_get_contents($ruta_real);
+        if ($binario === false) {
+            $r = array();
+            $r['error'] = true;
+            $r['msg'] = 'No se pudo leer la firma.';
+            echo json_encode($r, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        insertar_bitacora(3, 'Firma de autorizacion visualizada', 'ID respuesta: ' . $respuesta_id);
+
+        $r = array();
+        $r['error'] = false;
+        $r['data_url'] = 'data:image/png;base64,' . base64_encode($binario);
+        echo json_encode($r, JSON_UNESCAPED_UNICODE);
+    }
 }
 
 $accion = ACCION;
