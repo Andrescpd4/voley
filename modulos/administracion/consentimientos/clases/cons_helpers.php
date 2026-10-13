@@ -237,7 +237,7 @@ class ConsentimientosHelpers
                     ta.clase AS tipo_clase,
                     CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2) AS persona_nombre,
                     p.identificacion AS persona_documento,
-                    p.correo AS persona_correo,
+                    '' AS persona_correo,
                     r.nombre AS rol_nombre
                 FROM autorizacion_firmada af
                 INNER JOIN tipo_autorizacion ta ON ta.id = af.tipo_autorizacion_id

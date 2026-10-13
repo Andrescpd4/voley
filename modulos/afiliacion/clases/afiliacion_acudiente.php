@@ -62,7 +62,6 @@ trait afiliacion_acudiente
         if (isset($_POST['dep_fecha_nacimiento'])) { $dep_fecha_nac = trim($_POST['dep_fecha_nacimiento']); } else { $dep_fecha_nac = ''; }
         if (isset($_POST['dep_genero'])) { $dep_genero = trim($_POST['dep_genero']); } else { $dep_genero = 'M'; }
         if (isset($_POST['dep_celular'])) { $dep_celular = trim($_POST['dep_celular']); } else { $dep_celular = ''; }
-        if (isset($_POST['dep_correo'])) { $dep_correo = trim($_POST['dep_correo']); } else { $dep_correo = ''; }
         if (isset($_POST['dep_direccion'])) { $dep_direccion = trim($_POST['dep_direccion']); } else { $dep_direccion = ''; }
         if (isset($_POST['dep_categoria_id'])) { $dep_categoria = intval($_POST['dep_categoria_id']); } else { $dep_categoria = 0; }
         if (isset($_POST['dep_eps'])) { $dep_eps = trim($_POST['dep_eps']); } else { $dep_eps = ''; }
@@ -74,7 +73,6 @@ trait afiliacion_acudiente
 
         // 5. Leer datos del acudiente (editables)
         if (isset($_POST['acu_celular'])) { $acu_celular = trim($_POST['acu_celular']); } else { $acu_celular = ''; }
-        if (isset($_POST['acu_correo'])) { $acu_correo = trim($_POST['acu_correo']); } else { $acu_correo = ''; }
         if (isset($_POST['acu_direccion'])) { $acu_direccion = trim($_POST['acu_direccion']); } else { $acu_direccion = ''; }
         if (isset($_POST['parentesco'])) { $parentesco = trim($_POST['parentesco']); } else { $parentesco = 'padre'; }
 
@@ -117,7 +115,6 @@ trait afiliacion_acudiente
             'fecha_nacimiento' => ($dep_fecha_nac !== '') ? $dep_fecha_nac : null,
             'genero' => $dep_genero,
             'celular' => $dep_celular,
-            'correo' => $dep_correo,
             'direccion' => $dep_direccion
         );
 
@@ -173,11 +170,10 @@ trait afiliacion_acudiente
             $this->_insertar('usuario', $datos_usuario);
         }
 
-        // 13. Actualizar datos del acudiente si los edito
-        if ($acu_celular !== '' || $acu_correo !== '' || $acu_direccion !== '') {
+        // 13. Actualizar datos del acudiente si los edito (Fase 0: sin correo por ahora)
+        if ($acu_celular !== '' || $acu_direccion !== '') {
             $datos_acudiente = array();
             if ($acu_celular !== '') { $datos_acudiente['celular'] = $acu_celular; }
-            if ($acu_correo !== '') { $datos_acudiente['correo'] = $acu_correo; }
             if ($acu_direccion !== '') { $datos_acudiente['direccion'] = $acu_direccion; }
             if (!empty($datos_acudiente)) {
                 $this->_actualizar('persona', $datos_acudiente, array('id' => $persona_id_acudiente));
@@ -296,7 +292,6 @@ trait afiliacion_acudiente
         if (isset($_POST['dep_fecha_nacimiento'])) { $dep_fecha_nac = trim($_POST['dep_fecha_nacimiento']); } else { $dep_fecha_nac = ''; }
         if (isset($_POST['dep_genero'])) { $dep_genero = trim($_POST['dep_genero']); } else { $dep_genero = 'M'; }
         if (isset($_POST['dep_celular'])) { $dep_celular = trim($_POST['dep_celular']); } else { $dep_celular = ''; }
-        if (isset($_POST['dep_correo'])) { $dep_correo = trim($_POST['dep_correo']); } else { $dep_correo = ''; }
         if (isset($_POST['dep_direccion'])) { $dep_direccion = trim($_POST['dep_direccion']); } else { $dep_direccion = ''; }
         if (isset($_POST['dep_categoria_id'])) { $dep_categoria = intval($_POST['dep_categoria_id']); } else { $dep_categoria = 0; }
         if (isset($_POST['dep_eps'])) { $dep_eps = trim($_POST['dep_eps']); } else { $dep_eps = ''; }
@@ -347,7 +342,6 @@ trait afiliacion_acudiente
             'apellido2' => $dep_apellido2,
             'genero' => $dep_genero,
             'celular' => $dep_celular,
-            'correo' => $dep_correo,
             'direccion' => $dep_direccion
         );
         if ($dep_fecha_nac !== '') {
@@ -738,9 +732,9 @@ trait afiliacion_acudiente
 
         // 2. Obtener datos completos del deportista
         $deportista = $this->_obtener_fila(
-            "SELECT d.*, p.tipo_documento, p.identificacion, p.nombre1, p.nombre2,
-                    p.apellido1, p.apellido2, p.fecha_nacimiento, p.genero,
-                    p.celular, p.correo, p.direccion,
+             "SELECT d.*, p.tipo_documento, p.identificacion, p.nombre1, p.nombre2,
+                     p.apellido1, p.apellido2, p.fecha_nacimiento, p.genero,
+                     p.celular, '' AS correo, p.direccion,
                     c.nombre AS categoria_nombre
              FROM deportista d
              INNER JOIN persona p ON d.persona_id = p.id
@@ -767,8 +761,8 @@ trait afiliacion_acudiente
 
         // 4. Datos del acudiente
         $acudiente = $this->_obtener_fila(
-            "SELECT p.nombre1, p.nombre2, p.apellido1, p.apellido2,
-                    p.celular, p.correo, p.direccion, p.tipo_documento, p.identificacion
+             "SELECT p.nombre1, p.nombre2, p.apellido1, p.apellido2,
+                     p.celular, '' AS correo, p.direccion, p.tipo_documento, p.identificacion
              FROM persona p
              WHERE p.id = ?",
             array($persona_id_acudiente)

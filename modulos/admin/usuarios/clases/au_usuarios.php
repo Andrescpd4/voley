@@ -22,12 +22,12 @@ trait au_usuarios
                     p.identificacion,
                     p.user AS login,
                     CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2) AS nombre,
-                    p.correo,
-                    u.rol_id AS rol_id,
+                    '' AS correo,
+                    u.rol AS rol_id,
                     r.nombre AS rol
                 FROM admin_usuario u
                 INNER JOIN persona p ON p.id = u.persona_id
-                LEFT JOIN admin_rol r ON r.id = u.rol_id
+                LEFT JOIN admin_rol r ON r.id = u.rol
                 ORDER BY nombre ASC";
 
         $usuarios = $this->_consultar($sql);
@@ -179,7 +179,7 @@ trait au_usuarios
 
         $sql = "SELECT
                     u.persona_id,
-                    u.rol_id AS rol,
+                    u.rol AS rol,
                     p.identificacion,
                     p.user AS login,
                     CONCAT_WS(' ', p.nombre1, p.nombre2, p.apellido1, p.apellido2) AS persona_nombre

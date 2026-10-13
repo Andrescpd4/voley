@@ -197,8 +197,8 @@
 
                     <div class="form-group row">
                         <label class="col-sm-2 col-form-label">Correo</label>
-                        <div class="col-sm-10">
-                            <input type="email" id="correo" name="correo" title="Correo" placeholder="Correo electronico" maxlength="100" value="" />
+                        <div class="col-sm-4">
+                            <input type="email" id="correo" name="correo" title="Correo" placeholder="Correo electronico (No obligatorio)" maxlength="100" value="" />
                         </div>
                     </div>
 

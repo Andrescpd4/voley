@@ -154,7 +154,7 @@ class Formulario extends Base
             return;
         }
 
-        // 4. Preparar arreglo de actualizacion
+        // 4. Preparar arreglo de actualizacion (Fase 0: sin correo por ahora)
         $datos_actualizar = array(
             'tipo_documento'   => $tipo_documento,
             'identificacion'   => $identificacion,
@@ -165,7 +165,6 @@ class Formulario extends Base
             'fecha_nacimiento' => !empty($fecha_nacimiento) ? $fecha_nacimiento : null,
             'genero'           => $genero,
             'celular'          => $celular,
-            'correo'           => $correo,
             'direccion'        => $direccion
         );
 
@@ -353,8 +352,8 @@ class Formulario extends Base
                        c.nombre AS categoria_nombre, c.slug AS categoria_slug,
                        p.id AS persona_id, p.tipo_documento, p.identificacion,
                        p.nombre1, p.nombre2, p.apellido1, p.apellido2,
-                       p.fecha_nacimiento, p.genero, p.celular, p.correo, p.foto,
-                       da.parentesco, da.es_principal
+                        p.fecha_nacimiento, p.genero, p.celular, '' AS correo, p.foto,
+                        da.parentesco, da.es_principal
                 FROM deportista d
                 INNER JOIN persona p ON p.id = d.persona_id
                 INNER JOIN deportista_acudiente da ON da.deportista_id = d.id
@@ -416,7 +415,7 @@ class Formulario extends Base
                                   c.descripcion AS categoria_descripcion,
                                   p.id AS persona_id, p.tipo_documento, p.identificacion,
                                   p.nombre1, p.nombre2, p.apellido1, p.apellido2,
-                                  p.fecha_nacimiento, p.genero, p.celular, p.correo, p.direccion, p.foto
+                                   p.fecha_nacimiento, p.genero, p.celular, '' AS correo, p.direccion, p.foto
                            FROM deportista d
                            INNER JOIN persona p ON p.id = d.persona_id
                            LEFT JOIN categoria c ON c.id = d.categoria_id
@@ -429,9 +428,9 @@ class Formulario extends Base
         }
 
         // 3. Obtener datos del acudiente consultante
-        $sql_acudiente = "SELECT p.id, p.tipo_documento, p.identificacion,
-                                 p.nombre1, p.nombre2, p.apellido1, p.apellido2,
-                                 p.celular, p.correo, p.direccion
+         $sql_acudiente = "SELECT p.id, p.tipo_documento, p.identificacion,
+                                  p.nombre1, p.nombre2, p.apellido1, p.apellido2,
+                                  p.celular, '' AS correo, p.direccion
                           FROM persona p
                           WHERE p.id = $persona_id";
         $acudiente = $this->db->select_row($sql_acudiente);

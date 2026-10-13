@@ -276,6 +276,8 @@ class Sesion extends clase_base
             $clave = $_POST['clave'];
 
             // 3.1 Buscar usuario activo en BD
+            // Fase 0: persona.correo no existe por ahora; se devuelve vacio
+            // y el login por correo queda inactivo (login e identificacion si sirven).
             $sql = "SELECT 
                         u.id AS usuario_id,
                         u.login,
@@ -290,14 +292,14 @@ class Sesion extends clase_base
                         p.nombre2,
                         p.apellido1,
                         p.apellido2,
-                        p.correo,
+                        '' AS correo,
                         p.foto
                     FROM usuario u
                     INNER JOIN persona p ON p.id = u.persona_id
                     LEFT JOIN admin_rol r ON r.id = u.rol_id
-                    WHERE (u.login = ? OR p.identificacion = ? OR p.correo = ?) AND u.activo = 1";
+                    WHERE (u.login = ? OR p.identificacion = ?) AND u.activo = 1";
 
-            $row = $this->db->getConnection()->select($sql, array($login, $login, $login));
+            $row = $this->db->getConnection()->select($sql, array($login, $login));
 
             if (empty($row)) {
                 $this->denegarSesion("Usuario no encontrado o inactivo", 1);

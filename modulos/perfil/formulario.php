@@ -295,7 +295,7 @@ if (strpos($foto_actual, 'http') !== 0 && strpos($foto_actual, '/') !== 0) {
 
                             <div class="col-md-4">
                                 <label for="perfil_correo" class="form-label fw-semibold">Correo Electronico</label>
-                                <input type="email" class="form-control" id="perfil_correo" name="correo" value="<?php echo htmlspecialchars($persona['correo']); ?>" maxlength="100" placeholder="correo@ejemplo.com">
+                                <input type="email" class="form-control" id="perfil_correo" name="correo" value="<?php echo htmlspecialchars($persona['correo'] ?? ''); ?>" maxlength="100" placeholder="correo@ejemplo.com">
                             </div>
 
                             <div class="col-12">

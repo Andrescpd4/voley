@@ -152,15 +152,12 @@ if ($persona_id_sesion > 0) {
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label" for="reg_dep_celular">Celular del Deportista</label>
                             <input type="tel" class="form-control" id="reg_dep_celular" name="dep_celular" placeholder="Numero de celular" maxlength="20">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="reg_dep_correo">Correo Electronico</label>
-                            <input type="email" class="form-control" id="reg_dep_correo" name="dep_correo" placeholder="correo@ejemplo.com" maxlength="100">
-                        </div>
-                        <div class="col-md-4">
+                        <!-- Fase 0: campo correo oculto (persona.correo no existe por ahora) -->
+                        <div class="col-md-6">
                             <label class="form-label" for="reg_dep_direccion">Direccion de Residencia</label>
                             <input type="text" class="form-control" id="reg_dep_direccion" name="dep_direccion" placeholder="Barrio, Calle, Numero">
                         </div>
@@ -211,17 +208,13 @@ if ($persona_id_sesion > 0) {
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label" for="reg_acu_celular">Celular Acudiente (Editable)</label>
                             <input type="tel" class="form-control" id="reg_acu_celular" name="acu_celular"
                                 value="<?php echo htmlspecialchars($datos_acudiente_actual['celular'] ?? ''); ?>" placeholder="Celular de contacto">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="reg_acu_correo">Correo Acudiente (Editable)</label>
-                            <input type="email" class="form-control" id="reg_acu_correo" name="acu_correo"
-                                value="<?php echo htmlspecialchars($datos_acudiente_actual['correo'] ?? ''); ?>" placeholder="Correo de notificaciones">
-                        </div>
-                        <div class="col-md-4">
+                        <!-- Fase 0: campo correo oculto (persona.correo no existe por ahora) -->
+                        <div class="col-md-6">
                             <label class="form-label" for="reg_acu_direccion">Direccion Acudiente (Editable)</label>
                             <input type="text" class="form-control" id="reg_acu_direccion" name="acu_direccion"
                                 value="<?php echo htmlspecialchars($datos_acudiente_actual['direccion'] ?? ''); ?>" placeholder="Direccion del hogar">
@@ -980,7 +973,6 @@ if ($persona_id_sesion > 0) {
             document.getElementById('reg_dep_fecha_nacimiento').value = d.fecha_nacimiento || '';
             document.getElementById('reg_dep_genero').value = d.genero || 'M';
             document.getElementById('reg_dep_celular').value = d.celular || '';
-            document.getElementById('reg_dep_correo').value = d.correo || '';
             document.getElementById('reg_dep_direccion').value = d.direccion || '';
             document.getElementById('reg_dep_categoria_id').value = d.categoria_id || '';
             document.getElementById('reg_dep_eps').value = d.eps || '';
@@ -995,8 +987,6 @@ if ($persona_id_sesion > 0) {
                 var acu = d.acudiente;
                 var campoCel = document.getElementById('reg_acu_celular');
                 if (campoCel && acu.celular) { campoCel.value = acu.celular; }
-                var campoCorreo = document.getElementById('reg_acu_correo');
-                if (campoCorreo && acu.correo) { campoCorreo.value = acu.correo; }
                 var campoDir = document.getElementById('reg_acu_direccion');
                 if (campoDir && acu.direccion) { campoDir.value = acu.direccion; }
             }

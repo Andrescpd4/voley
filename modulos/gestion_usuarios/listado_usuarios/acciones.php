@@ -27,7 +27,7 @@ class Persona extends formulario_basico
         $v->addRules('nombre1', 'Primer Nombre', array('required' => true, 'maxLength' => 50));
         $v->addRules('apellido1', 'Primer Apellido', array('required' => true, 'maxLength' => 50));
         $v->addRules('telefono', 'Celular', array('required' => true, 'maxLength' => 20));
-        $v->addRules('correo', 'Correo', array('required' => true, 'maxLength' => 100));
+        // Fase 0: correo opcional (persona.correo no existe por ahora, no se guarda)
         $v->addRules('login', 'Usuario de ingreso', array('required' => true, 'maxLength' => 50));
 
         $resultado = $v->validate();
@@ -150,7 +150,7 @@ class Persona extends formulario_basico
         $datos_persona['apellido2'] = $apellido2;
         $datos_persona['genero'] = $genero;
         $datos_persona['celular'] = $celular;
-        $datos_persona['correo'] = $correo;
+        // Fase 0: no se guarda correo (persona.correo no existe por ahora)
         $datos_persona['foto'] = 'img/user.png';
 
         $this->db->insert('persona', $datos_persona);
@@ -250,7 +250,7 @@ class Persona extends formulario_basico
         $datos_persona['apellido2'] = $apellido2;
         $datos_persona['genero'] = $genero;
         $datos_persona['celular'] = $celular;
-        $datos_persona['correo'] = $correo;
+        // Fase 0: no se guarda correo (persona.correo no existe por ahora)
 
         $this->db->update('persona', $datos_persona, array('id' => intval($persona_id)));
 
