@@ -321,41 +321,6 @@ class Eventos extends Base
         echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
     }
 
-    // 12. Cambiar estado de la convocatoria
-    function cambiar_estado_convocada()
-    {
-        $this->validar_token_simple();
-
-        if (isset($_POST['convocada_id'])) {
-            $convocada_id = intval($_POST['convocada_id']);
-        } else {
-            $convocada_id = 0;
-        }
-
-        if ($convocada_id <= 0) {
-            $r = array();
-            $r['error'] = true;
-            $r['msg'] = 'ID de convocatoria requerido.';
-            echo json_encode($r, JSON_UNESCAPED_UNICODE);
-            return;
-        }
-
-        if (isset($_POST['estado'])) {
-            $estado = trim($_POST['estado']);
-        } else {
-            $estado = '';
-        }
-
-        if (isset($_POST['observaciones'])) {
-            $observaciones = trim($_POST['observaciones']);
-        } else {
-            $observaciones = '';
-        }
-
-        $resultado = $this->helpers->cambiar_estado_convocada($convocada_id, $estado, $observaciones);
-        echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
-    }
-
     // 13. Matriz de autorizaciones de un evento (lectura para admin y entrenador)
     function listar_autorizaciones()
     {

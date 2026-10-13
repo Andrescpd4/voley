@@ -89,16 +89,18 @@
 
                     <div class="d-flex align-items-center">
                         <div class="ms-1 header-item d-flex">
-                            <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <button type="button" id="voleyCampanaBoton" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Notificaciones">
                                 <i class='bx bx-bell fs-22'></i>
+                                <span id="voleyCampanaConteo" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
                             </button>
                             <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0">
                                 <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
                                     <h6 class="m-0 fs-16 fw-semibold">Notificaciones</h6>
                                 </div>
-                                <div class="list-group list-group-flush" style="max-height: 320px; overflow-y: auto;"></div>
-                                <div class="p-2 text-center border-top">
-                                    <small class="text-muted">Sin notificaciones</small>
+                                <div class="list-group list-group-flush" id="voleyCampanaLista" style="max-height: 320px; overflow-y: auto;"></div>
+                                <div class="p-2 text-center border-top d-flex justify-content-between align-items-center">
+                                    <small class="text-muted" id="voleyCampanaPie">Sin notificaciones</small>
+                                    <button type="button" class="btn btn-sm btn-link text-decoration-none d-none" id="voleyCampanaMarcarTodas">Marcar todas leídas</button>
                                 </div>
                             </div>
                         </div>

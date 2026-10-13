@@ -717,6 +717,359 @@ class Formulario extends clase_base
         echo json_encode(array('error' => false, 'data' => $filas));
     }
 
+    // ============================================================
+    // AUTORIZACIONES DE EVENTOS DEL ACUDIENTE (Fase C)
+    // El acudiente responde todo en inicio (Nada que expulse).
+    //
+    // Nota de compatibilidad: select_one() con COUNT(*) devuelve
+    // entero (int) con este controlador PDO, no cadena. Por eso los
+    // conteos se leen con _a_numero() que acepta int o string.
+    // ============================================================
+
+    // Apoyo: convertir un conteo de BD a numero (0 si no es valido)
+    private function _a_numero($valor)
+    {
+        if (is_int($valor)) {
+            return intval($valor);
+        }
+        if (is_string($valor)) {
+            return intval($valor);
+        }
+        return 0;
+    }
+
+    // 20. Convocatorias pendientes de mis deportistas vinculados
+    function mis_convocatorias()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        // 1. Convocadas activas de eventos activos con mis deportistas
+        $sql = "SELECT ec.id AS convocada_id, e.id AS evento_id, e.nombre AS evento_nombre, e.fecha AS evento_fecha, e.horario AS evento_horario, e.lugar AS evento_lugar, e.recomendaciones AS evento_recomendaciones, e.requiere_autorizacion AS requiere_autorizacion, d.id AS deportista_id, CONCAT_WS(' ', pdep.nombre1, pdep.apellido1) AS deportista_nombre, ae.id AS respuesta_id FROM evento_convocada ec INNER JOIN evento e ON e.id = ec.evento_id INNER JOIN deportista d ON d.id = ec.deportista_id INNER JOIN persona pdep ON pdep.id = d.persona_id INNER JOIN deportista_acudiente da ON da.deportista_id = d.id LEFT JOIN autorizacion_evento ae ON ae.id = (SELECT MAX(x.id) FROM autorizacion_evento x WHERE x.evento_id = ec.evento_id AND x.deportista_id = ec.deportista_id) WHERE ec.activo = 1 AND e.activo = 1 AND da.acudiente_id = '$persona_id' ORDER BY e.fecha DESC, pdep.apellido1 ASC";
+        $filas = $this->db->select_all($sql);
+        if (!is_array($filas)) {
+            $filas = array();
+        }
+
+        // 2. Quedarse solo con las que aun no tienen respuesta
+        $pendientes = array();
+        for ($i = 0; $i < count($filas); $i++) {
+            $respondida = false;
+            if (isset($filas[$i]['respuesta_id'])) {
+                if (intval($filas[$i]['respuesta_id']) > 0) {
+                    $respondida = true;
+                }
+            }
+            if ($respondida) {
+                continue;
+            }
+            $pendientes[] = $filas[$i];
+        }
+
+        echo json_encode(array('error' => false, 'data' => $pendientes));
+    }
+
+    // 21. Responder Autorizo / No autorizo con firma manuscrita
+    function responder_autorizacion()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        // 1. Leer y asegurar los datos del POST
+        if (isset($_POST['evento_id'])) {
+            $id_evento = intval($_POST['evento_id']);
+        } else {
+            $id_evento = 0;
+        }
+        if (isset($_POST['deportista_id'])) {
+            $id_deportista = intval($_POST['deportista_id']);
+        } else {
+            $id_deportista = 0;
+        }
+        if (isset($_POST['autoriza'])) {
+            $autoriza = intval($_POST['autoriza']);
+        } else {
+            $autoriza = -1;
+        }
+        if (isset($_POST['firma_data'])) {
+            $firma_data = trim($_POST['firma_data']);
+        } else {
+            $firma_data = '';
+        }
+
+        if ($id_evento <= 0 || $id_deportista <= 0) {
+            $this->_error_muro('Convocatoria no valida');
+            return;
+        }
+        if ($autoriza !== 0 && $autoriza !== 1) {
+            $this->_error_muro('Debes elegir Autorizo o No autorizo');
+            return;
+        }
+
+        // 2. El evento debe existir y estar activo
+        $evento = $this->db->select_row("SELECT id, nombre, fecha, horario, lugar, recomendaciones, requiere_autorizacion FROM evento WHERE id = '$id_evento' AND activo = 1");
+        if (empty($evento)) {
+            $this->_error_muro('El evento no es valido');
+            return;
+        }
+        $requiere = 0;
+        if (isset($evento['requiere_autorizacion'])) {
+            $requiere = intval($evento['requiere_autorizacion']);
+        }
+        $nombre_evento = '';
+        if (isset($evento['nombre'])) {
+            $nombre_evento = $evento['nombre'];
+        }
+        $fecha_evento = '';
+        if (isset($evento['fecha'])) {
+            $fecha_evento = $evento['fecha'];
+        }
+        $horario_evento = '';
+        if (isset($evento['horario'])) {
+            $horario_evento = $evento['horario'];
+        }
+        $lugar_evento = '';
+        if (isset($evento['lugar'])) {
+            $lugar_evento = $evento['lugar'];
+        }
+        $recomendaciones_evento = '';
+        if (isset($evento['recomendaciones'])) {
+            $recomendaciones_evento = $evento['recomendaciones'];
+        }
+
+        // 3. El deportista debe estar vinculado a este acudiente
+        $vinculo = $this->db->select_one("SELECT COUNT(*) FROM deportista_acudiente WHERE deportista_id = '$id_deportista' AND acudiente_id = '$persona_id'");
+        $total_vinculo = $this->_a_numero($vinculo);
+        if ($total_vinculo <= 0) {
+            $this->_error_muro('No tienes vinculo con este deportista');
+            return;
+        }
+
+        // 4. El deportista debe estar convocado y activo en el evento
+        $convocada = $this->db->select_one("SELECT COUNT(*) FROM evento_convocada WHERE evento_id = '$id_evento' AND deportista_id = '$id_deportista' AND activo = 1");
+        $total_convocada = $this->_a_numero($convocada);
+        if ($total_convocada <= 0) {
+            $this->_error_muro('Tu deportista no esta convocada a este evento');
+            return;
+        }
+
+        // 5. No permitir responder dos veces
+        $duplicada = $this->db->select_one("SELECT COUNT(*) FROM autorizacion_evento WHERE evento_id = '$id_evento' AND deportista_id = '$id_deportista'");
+        $total_duplicada = $this->_a_numero($duplicada);
+        if ($total_duplicada > 0) {
+            $this->_error_muro('Ya respondiste esta convocatoria');
+            return;
+        }
+
+        // 6. Si el evento exige autorizacion, la firma manuscrita es obligatoria
+        $ruta_firma = '';
+        if ($requiere === 1) {
+            $guardado = $this->_guardar_firma_evento($persona_id, $firma_data);
+            if ($guardado['ok'] === false) {
+                $this->_error_muro($guardado['msg']);
+                return;
+            }
+            $ruta_firma = $guardado['ruta'];
+        }
+
+        // 7. Armar la evidencia electronica de auditoria
+        if (function_exists('verIP')) {
+            $ip_cliente = verIP();
+        } else if (isset($_SERVER['REMOTE_ADDR'])) {
+            $ip_cliente = $_SERVER['REMOTE_ADDR'];
+        } else {
+            $ip_cliente = '';
+        }
+        if (isset($_SERVER['HTTP_USER_AGENT'])) {
+            $agente = $_SERVER['HTTP_USER_AGENT'];
+        } else {
+            $agente = '';
+        }
+        $fecha_respuesta = date('Y-m-d H:i:s');
+        if ($autoriza === 1) {
+            $estado_respuesta = 'AUTORIZADA';
+        } else {
+            $estado_respuesta = 'NO_AUTORIZADA';
+        }
+        $hash_evidencia = hash('sha256', $persona_id . '|' . $id_evento . '|' . $id_deportista . '|' . $fecha_respuesta . '|' . $ip_cliente . '|' . $estado_respuesta);
+        $evidencia = array(
+            'ip' => $ip_cliente,
+            'user_agent' => $agente,
+            'fecha_hora' => $fecha_respuesta,
+            'persona_id' => $persona_id,
+            'evento_id' => $id_evento,
+            'evento_nombre' => $nombre_evento,
+            'deportista_id' => $id_deportista,
+            'estado' => $estado_respuesta,
+            'hash_evidencia' => $hash_evidencia
+        );
+        $firma_json = json_encode($evidencia, JSON_UNESCAPED_UNICODE);
+
+        // 8. Guardar la respuesta
+        $nuevo_id = $this->db->insert('autorizacion_evento', array(
+            'evento_id' => $id_evento,
+            'deportista_id' => $id_deportista,
+            'acudiente_id' => $persona_id,
+            'autoriza' => $autoriza,
+            'firma_electronica' => $firma_json,
+            'firma_imagen' => $ruta_firma
+        ));
+        if ($nuevo_id <= 0) {
+            $this->_error_muro('No se pudo guardar tu respuesta');
+            return;
+        }
+
+        // 9. Apagar los avisos pendientes de este evento para este acudiente
+        $this->db->query("UPDATE notificaciones SET leida = 1 WHERE persona_id = '$persona_id' AND evento_id = '$id_evento' AND leida = 0");
+
+        if (function_exists('insertar_bitacora')) {
+            insertar_bitacora(1, 'Responder autorizacion de evento', 'Evento: ' . $nombre_evento . ' Estado: ' . $estado_respuesta);
+        }
+
+        if ($autoriza === 1) {
+            $mensaje_ok = 'Autorizacion registrada correctamente';
+        } else {
+            $mensaje_ok = 'Respuesta registrada: no autorizaste la participacion';
+        }
+        echo json_encode(array('error' => false, 'msg' => $mensaje_ok, 'data' => array('id' => $nuevo_id, 'autoriza' => $autoriza, 'fecha' => $fecha_respuesta, 'evento_nombre' => $nombre_evento, 'evento_fecha' => $fecha_evento, 'evento_horario' => $horario_evento, 'evento_lugar' => $lugar_evento, 'evento_recomendaciones' => $recomendaciones_evento)));
+    }
+
+    // 22. Guardar el PNG de la firma en storage/firmas/ (dato sensible sin URL directa)
+    private function _guardar_firma_evento($persona_id, $data_url)
+    {
+        $id_acudiente = intval($persona_id);
+
+        // 1. Validar prefijo del dataURL
+        if (strpos($data_url, 'data:image/png;base64,') !== 0) {
+            return array('ok' => false, 'msg' => 'Debes firmar en el recuadro antes de confirmar', 'ruta' => '');
+        }
+
+        // 2. Decodificar base64 en modo estricto
+        $base64_limpio = substr($data_url, strlen('data:image/png;base64,'));
+        $binario = base64_decode($base64_limpio, true);
+        if ($binario === false) {
+            return array('ok' => false, 'msg' => 'La firma recibida no se pudo decodificar', 'ruta' => '');
+        }
+
+        // 3. Limite de tamano: 500 KB
+        if (strlen($binario) > 500 * 1024) {
+            return array('ok' => false, 'msg' => 'La imagen de la firma excede el tamano permitido', 'ruta' => '');
+        }
+
+        // 4. Verificar magia PNG real (no confiar solo en el prefijo)
+        $magia_png = "\x89PNG\r\n\x1a\n";
+        if (substr($binario, 0, 8) !== $magia_png) {
+            return array('ok' => false, 'msg' => 'La firma recibida no es una imagen PNG valida', 'ruta' => '');
+        }
+
+        // 5. Crear carpeta protegida si no existe
+        $carpeta = 'storage/firmas/';
+        if (!is_dir($carpeta)) {
+            mkdir($carpeta, 0755, true);
+        }
+
+        // 6. Nombre unico construido en servidor (sin nada del POST)
+        $nombre_archivo = 'firma_evt_' . $id_acudiente . '_' . date('YmdHis') . '.png';
+        $ruta_relativa = $carpeta . $nombre_archivo;
+
+        $escritos = file_put_contents($ruta_relativa, $binario);
+        if ($escritos === false) {
+            return array('ok' => false, 'msg' => 'No se pudo guardar la imagen de la firma', 'ruta' => '');
+        }
+
+        return array('ok' => true, 'msg' => 'Firma guardada', 'ruta' => $ruta_relativa);
+    }
+
+    // 23. Ultimas 10 notificaciones del usuario (para la campana)
+    function listar_notificaciones()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        $filas = $this->db->select_all("SELECT id, titulo, mensaje, url, evento_id, leida, creada_en FROM notificaciones WHERE persona_id = '$persona_id' ORDER BY id DESC LIMIT 10");
+        if (!is_array($filas)) {
+            $filas = array();
+        }
+
+        echo json_encode(array('error' => false, 'data' => $filas));
+    }
+
+    // 24. Contar avisos sin leer (numero de la campana)
+    function contar_notificaciones()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        $total_crudo = $this->db->select_one("SELECT COUNT(*) FROM notificaciones WHERE persona_id = '$persona_id' AND leida = 0");
+        $total = $this->_a_numero($total_crudo);
+
+        echo json_encode(array('error' => false, 'data' => array('total' => $total)));
+    }
+
+    // 25. Marcar avisos como leidos: uno (id), un evento (evento_id) o todos (id = 0)
+    function marcar_notificacion()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        if (isset($_POST['id'])) {
+            $id_aviso = intval($_POST['id']);
+        } else {
+            $id_aviso = 0;
+        }
+        if (isset($_POST['evento_id'])) {
+            $id_evento = intval($_POST['evento_id']);
+        } else {
+            $id_evento = 0;
+        }
+
+        // 1. Elegir alcance: un evento, un aviso o todos los mios
+        if ($id_evento > 0) {
+            $this->db->query("UPDATE notificaciones SET leida = 1 WHERE persona_id = '$persona_id' AND evento_id = '$id_evento' AND leida = 0");
+        } else if ($id_aviso > 0) {
+            $this->db->query("UPDATE notificaciones SET leida = 1 WHERE id = '$id_aviso' AND persona_id = '$persona_id'");
+        } else {
+            $this->db->query("UPDATE notificaciones SET leida = 1 WHERE persona_id = '$persona_id' AND leida = 0");
+        }
+
+        echo json_encode(array('error' => false, 'msg' => 'ok'));
+    }
+
     // 19. Eliminar una publicacion (solo administradores)
     function eliminar_publicacion()
     {

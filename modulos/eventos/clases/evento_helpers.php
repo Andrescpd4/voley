@@ -522,11 +522,9 @@ class EventosHelpers
             }
 
             // No duplicar avisos pendientes del mismo evento para el mismo acudiente
-            $titulo_esc = $this->db->escape_string($titulo_aviso);
             $sql_duplo = "SELECT id FROM notificaciones
                           WHERE persona_id = " . $acudiente_id . "
-                          AND titulo = '" . $titulo_esc . "'
-                          AND mensaje LIKE '%" . $this->db->escape_string($nombre_evento) . "%'
+                          AND evento_id = " . $id_evento . "
                           AND leida = 0";
             $existe = $this->db->select_row($sql_duplo);
             $ya_avisado = false;
@@ -544,6 +542,7 @@ class EventosHelpers
                 'titulo' => $titulo_aviso,
                 'mensaje' => $texto_aviso,
                 'url' => 'inicio',
+                'evento_id' => $id_evento,
                 'leida' => 0
             );
             $this->db->insert('notificaciones', $aviso);

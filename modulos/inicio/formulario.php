@@ -159,6 +159,67 @@ if ($es_acudiente) {
 </div>
 
 <!-- ============================================================ -->
+<!-- AUTORIZACIONES DE EVENTOS (solo acudiente, Fase C)          -->
+<!-- ============================================================ -->
+<?php if ($es_acudiente) : ?>
+    <div class="row inicio-bloque d-none" id="bloqueAutorizaciones">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <span class="badge bg-warning-subtle text-warning p-2">
+                            <i aria-hidden="true" class="ri-shield-check-line fs-5"></i>
+                        </span>
+                        <div class="flex-grow-1">
+                            <h3 class="inicio-seccion-titulo card-title mb-0 fs-5">Autorizaciones de eventos</h3>
+                            <p class="text-muted small mb-0">Tus deportistas fueron convocadas. Responde para cada una.</p>
+                        </div>
+                        <span class="badge bg-warning text-dark" id="etiquetaConteoAutorizaciones"></span>
+                    </div>
+                    <div id="contenedorAutorizaciones">
+                        <!-- Se inyecta por JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de detalle de convocatoria con firma y decision -->
+    <div class="modal fade" id="iniFirmaModal" tabindex="-1" aria-labelledby="iniFirmaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="iniFirmaModalLabel">Detalle de la convocatoria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="iniDetalleEvento" class="border rounded bg-light-subtle p-3 mb-3">
+                        <!-- Lo pinta iniCrearDetalleEvento -->
+                    </div>
+                    <div id="iniZonaFirma">
+                        <label class="form-label fw-medium" for="iniFirmaCanvas">Firma en el recuadro <span class="text-danger">*</span></label>
+                        <canvas id="iniFirmaCanvas" class="w-100 border rounded bg-light" style="height: 180px; touch-action: none;" aria-label="Recuadro para firmar con el dedo o el mouse"></canvas>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="iniLimpiarFirma()">
+                                <i aria-hidden="true" class="ri-eraser-line me-1"></i> Limpiar
+                            </button>
+                            <small class="text-muted">Usa el dedo o el mouse</small>
+                        </div>
+                        <div class="text-danger small mt-1" id="iniFirmaError" role="alert"></div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <span id="iniBotonesDecision" class="d-flex gap-2">
+                        <!-- Los pinta iniAbrirDetalle segun el tipo de evento -->
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
+<!-- ============================================================ -->
 <!-- COMPOSER: PUBLICAR NOVEDAD (visible solo para admin)         -->
 <!-- ============================================================ -->
 <?php if ($es_administrador) : ?>
@@ -751,8 +812,432 @@ if ($es_acudiente) {
         });
     }
 
+    // ============================================================
+    // AUTORIZACIONES DE EVENTOS DEL ACUDIENTE
+    // ============================================================
+
+    // Respuesta que se esta firmando en el modal
+    var iniFirmaActual = null;
+
+    // Ultima lista de pendientes (para mostrar nombres en el modal)
+    var iniListaAutorizaciones = [];
+
+    // Bandera que indica si ya hay trazo en el canvas
+    var iniFirmaTieneTrazo = false;
+
+    // Bandera para saber si se esta dibujando ahora mismo
+    var iniFirmaDibujando = false;
+
+    // 11. Cargar convocatorias pendientes del acudiente
+    function iniCargarAutorizaciones() {
+        var bloque = document.getElementById('bloqueAutorizaciones');
+        if (!bloque) {
+            return;
+        }
+        inicioAjax('mis_convocatorias', {}, function(respuesta_autorizaciones) {
+            if (respuesta_autorizaciones.error || !respuesta_autorizaciones.data) {
+                return;
+            }
+            iniRenderizarAutorizaciones(respuesta_autorizaciones.data || []);
+        });
+    }
+
+    // 12. Pintar tarjetas o esconder el bloque si no hay pendientes
+    function iniRenderizarAutorizaciones(lista_pendientes) {
+        var bloque = document.getElementById('bloqueAutorizaciones');
+        var contenedor = document.getElementById('contenedorAutorizaciones');
+        if (!bloque || !contenedor) {
+            return;
+        }
+        iniListaAutorizaciones = lista_pendientes;
+        if (lista_pendientes.length === 0) {
+            bloque.classList.add('d-none');
+            return;
+        }
+        var html_final = '';
+        for (var i = 0; i < lista_pendientes.length; i++) {
+            html_final = html_final + iniCrearTarjetaAutorizacion(lista_pendientes[i]);
+        }
+        contenedor.innerHTML = html_final;
+        iniActualizarConteoAutorizaciones();
+        bloque.classList.remove('d-none');
+    }
+
+    // 13. Actualizar el contador y esconder el bloque cuando quede vacio
+    function iniActualizarConteoAutorizaciones() {
+        var restantes = document.querySelectorAll('[id^="tarjetaConvocada"]').length;
+        var etiqueta = document.getElementById('etiquetaConteoAutorizaciones');
+        if (etiqueta) {
+            if (restantes === 1) {
+                etiqueta.textContent = '1 pendiente';
+            } else {
+                etiqueta.textContent = restantes + ' pendientes';
+            }
+        }
+        if (restantes === 0) {
+            var bloque = document.getElementById('bloqueAutorizaciones');
+            if (bloque) {
+                bloque.classList.add('d-none');
+            }
+        }
+    }
+
+    // 14. Buscar una pendiente por su id de convocada
+    function iniBuscarConvocada(convocada_id) {
+        for (var i = 0; i < iniListaAutorizaciones.length; i++) {
+            var item = iniListaAutorizaciones[i];
+            var actual = parseInt(item.convocada_id, 10) || 0;
+            if (actual === convocada_id) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    // 15. Tarjeta de una convocatoria pendiente
+    function iniCrearTarjetaAutorizacion(item) {
+        var convocada_id = parseInt(item.convocada_id, 10) || 0;
+        var nombre_evento = inicioSanearTexto(item.evento_nombre);
+        var fecha_evento = inicioSanearTexto(item.evento_fecha);
+        var lugar_evento = inicioSanearTexto(item.evento_lugar);
+        var nombre_deportista = inicioSanearTexto(item.deportista_nombre);
+
+        return `<div class="border rounded p-3 mb-2 bg-light-subtle" id="tarjetaConvocada${convocada_id}">
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="fw-semibold">${nombre_evento}</span>
+            <span class="badge bg-primary-subtle text-primary">${fecha_evento}</span>
+        </div>
+        <div class="small text-muted mb-2"><i aria-hidden="true" class="ri-map-pin-line me-1"></i>${lugar_evento} · <i aria-hidden="true" class="ri-user-line me-1"></i>${nombre_deportista}</div>
+        <button type="button" class="btn btn-primary" onclick="iniAbrirDetalle(${convocada_id})">
+            <i aria-hidden="true" class="ri-eye-line me-1"></i> Ver detalles
+        </button>
+    </div>`;
+    }
+
+    // 16. Fila de dato del detalle con "Por confirmar" si viene vacio
+    function iniDatoDetalle(etiqueta, valor_crudo) {
+        var texto = inicioSanearTexto(valor_crudo);
+        if (texto === '') {
+            texto = '<span class="text-muted">Por confirmar</span>';
+        }
+        return `<div class="small"><span class="text-muted">${etiqueta}:</span> ${texto}</div>`;
+    }
+
+    // 17. Armar el bloque de detalles del torneo para el modal
+    function iniCrearDetalleEvento(item) {
+        var nombre_evento = inicioSanearTexto(item.evento_nombre);
+        var nombre_deportista = inicioSanearTexto(item.deportista_nombre);
+        var html_detalle = `<div class="fw-semibold mb-1">${nombre_evento}</div>`;
+        html_detalle = html_detalle + iniDatoDetalle('Deportista', item.deportista_nombre);
+        html_detalle = html_detalle + iniDatoDetalle('Fecha', item.evento_fecha);
+        html_detalle = html_detalle + iniDatoDetalle('Hora', item.evento_horario);
+        html_detalle = html_detalle + iniDatoDetalle('Lugar', item.evento_lugar);
+        html_detalle = html_detalle + iniDatoDetalle('Recomendaciones', item.evento_recomendaciones);
+        return html_detalle;
+    }
+
+    // 18. Abrir el modal de detalle con firma y botones de decision
+    function iniAbrirDetalle(convocada_id) {
+        var item = iniBuscarConvocada(convocada_id);
+        if (!item) {
+            return;
+        }
+        var evento_id = parseInt(item.evento_id, 10) || 0;
+        var deportista_id = parseInt(item.deportista_id, 10) || 0;
+        var requiere = parseInt(item.requiere_autorizacion, 10) || 0;
+        iniFirmaActual = {
+            convocada_id: convocada_id,
+            evento_id: evento_id,
+            deportista_id: deportista_id
+        };
+
+        // Pintar los detalles del torneo
+        document.getElementById('iniDetalleEvento').innerHTML = iniCrearDetalleEvento(item);
+        document.getElementById('iniFirmaError').textContent = '';
+
+        // Mostrar la firma solo si el evento la exige
+        var zona_firma = document.getElementById('iniZonaFirma');
+        if (requiere === 1) {
+            zona_firma.classList.remove('d-none');
+        } else {
+            zona_firma.classList.add('d-none');
+        }
+
+        // Botones de decision segun el tipo de evento
+        var zona_botones = '';
+        if (requiere === 1) {
+            zona_botones = `<button type="button" class="btn btn-outline-danger" onclick="iniResponderDesdeModal(0)">No autorizo</button>
+            <button type="button" class="btn btn-success" onclick="iniResponderDesdeModal(1)">Autorizo</button>`;
+        } else {
+            zona_botones = `<button type="button" class="btn btn-primary" onclick="iniEnteradoDesdeModal()">Enterado</button>`;
+        }
+        document.getElementById('iniBotonesDecision').innerHTML = zona_botones;
+
+        iniLimpiarFirma();
+        var modal_elemento = document.getElementById('iniFirmaModal');
+        var modal_instancia = bootstrap.Modal.getOrCreateInstance(modal_elemento);
+        modal_instancia.show();
+
+        // Calibrar el canvas cuando el modal ya sea visible
+        setTimeout(function() {
+            iniFirmaAjustar();
+        }, 300);
+    }
+
+    // 19. Boton Enterado para eventos que no exigen autorizacion
+    function iniEnterado(convocada_id, evento_id) {
+        var tarjeta = document.getElementById('tarjetaConvocada' + convocada_id);
+        inicioAjax('marcar_notificacion', {
+            id: 0,
+            evento_id: evento_id
+        }, function(respuesta_enterado) {
+            if (respuesta_enterado.error) {
+                return;
+            }
+            if (tarjeta) {
+                tarjeta.remove();
+            }
+            iniActualizarConteoAutorizaciones();
+            if (typeof voleyCampanaActualizar === 'function') {
+                voleyCampanaActualizar();
+            }
+        });
+    }
+
+    // 20. Bloquear o liberar los botones de decision del modal
+    function iniBloquearBotonesModal(bloquear) {
+        var contenedor = document.getElementById('iniBotonesDecision');
+        if (!contenedor) {
+            return;
+        }
+        var botones = contenedor.querySelectorAll('button');
+        for (var i = 0; i < botones.length; i++) {
+            botones[i].disabled = bloquear;
+        }
+    }
+
+    // 21. Responder Autorizo / No autorizo desde el modal
+    function iniResponderDesdeModal(autoriza) {
+        if (!iniFirmaActual) {
+            return;
+        }
+        if (autoriza !== 0 && autoriza !== 1) {
+            return;
+        }
+        if (!iniFirmaTieneTrazo) {
+            document.getElementById('iniFirmaError').textContent = 'Debes firmar en el recuadro antes de responder.';
+            return;
+        }
+        var canvas = document.getElementById('iniFirmaCanvas');
+        var imagen_firma = canvas.toDataURL('image/png');
+        iniBloquearBotonesModal(true);
+
+        var convocada_actual = iniFirmaActual.convocada_id;
+        inicioAjax('responder_autorizacion', {
+            evento_id: iniFirmaActual.evento_id,
+            deportista_id: iniFirmaActual.deportista_id,
+            autoriza: autoriza,
+            firma_data: imagen_firma
+        }, function(respuesta_firma) {
+            iniBloquearBotonesModal(false);
+            if (respuesta_firma.error) {
+                document.getElementById('iniFirmaError').textContent = respuesta_firma.msg || 'No se pudo guardar tu respuesta.';
+                return;
+            }
+            var modal_elemento = document.getElementById('iniFirmaModal');
+            var modal_instancia = bootstrap.Modal.getInstance(modal_elemento);
+            if (modal_instancia) {
+                modal_instancia.hide();
+            }
+            iniMostrarExitoAutorizacion(convocada_actual, autoriza, respuesta_firma.data);
+            if (typeof voleyCampanaActualizar === 'function') {
+                voleyCampanaActualizar();
+            }
+        });
+    }
+
+    // 22. Boton Enterado desde el modal (eventos que no exigen firma)
+    function iniEnteradoDesdeModal() {
+        if (!iniFirmaActual) {
+            return;
+        }
+        var convocada_id = iniFirmaActual.convocada_id;
+        var evento_id = iniFirmaActual.evento_id;
+        var modal_elemento = document.getElementById('iniFirmaModal');
+        var modal_instancia = bootstrap.Modal.getInstance(modal_elemento);
+        if (modal_instancia) {
+            modal_instancia.hide();
+        }
+        iniEnterado(convocada_id, evento_id);
+    }
+
+    // 23. Reemplazar la tarjeta por el comprobante con detalles del torneo
+    function iniMostrarExitoAutorizacion(convocada_id, autoriza, detalle) {
+        var tarjeta = document.getElementById('tarjetaConvocada' + convocada_id);
+        if (!tarjeta) {
+            return;
+        }
+        if (!detalle) {
+            detalle = {};
+        }
+
+        // Nombre de la deportista desde la lista guardada
+        var item = iniBuscarConvocada(convocada_id);
+        var nombre_deportista = '';
+        if (item) {
+            nombre_deportista = inicioSanearTexto(item.deportista_nombre);
+        }
+
+        // Detalles del torneo que envia el servidor (nunca se esconden)
+        var nombre_evento = inicioSanearTexto(detalle.evento_nombre);
+        var fecha_evento = inicioSanearTexto(detalle.evento_fecha);
+        var horario_evento = inicioSanearTexto(detalle.evento_horario);
+        var lugar_evento = inicioSanearTexto(detalle.evento_lugar);
+        var recomendaciones = inicioSanearTexto(detalle.evento_recomendaciones);
+        var fecha_respuesta = inicioSanearTexto(detalle.fecha);
+        if (nombre_evento === '') {
+            nombre_evento = 'Por confirmar';
+        }
+        if (fecha_evento === '') {
+            fecha_evento = 'Por confirmar';
+        }
+        if (horario_evento === '') {
+            horario_evento = 'Por confirmar';
+        }
+        if (lugar_evento === '') {
+            lugar_evento = 'Por confirmar';
+        }
+        if (recomendaciones === '') {
+            recomendaciones = 'Por confirmar';
+        }
+
+        var texto_respuesta = 'Autorizaste la participación';
+        var clase_alerta = 'success';
+        if (autoriza !== 1) {
+            texto_respuesta = 'No autorizaste la participación';
+            clase_alerta = 'danger';
+        }
+
+        tarjeta.innerHTML = `<div class="alert alert-${clase_alerta} mb-0">
+            <div class="fw-semibold mb-1"><i aria-hidden="true" class="ri-check-double-line me-1"></i>${texto_respuesta} de ${nombre_deportista}</div>
+            <div class="small"><strong>${nombre_evento}</strong></div>
+            <div class="small">Fecha: ${fecha_evento} · Hora: ${horario_evento}</div>
+            <div class="small">Lugar: ${lugar_evento}</div>
+            <div class="small">Recomendaciones: ${recomendaciones}</div>
+            <div class="small mt-1 text-muted">Registrada el ${fecha_respuesta} con tu firma manuscrita.</div>
+        </div>`;
+        tarjeta.removeAttribute('id');
+        iniActualizarConteoAutorizaciones();
+    }
+
+    // 24. Calibrar el canvas al tamano visible real
+    function iniFirmaAjustar() {
+        var canvas = document.getElementById('iniFirmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        if (canvas.clientWidth === 0) {
+            return;
+        }
+        var escala = 1;
+        if (window.devicePixelRatio) {
+            escala = window.devicePixelRatio;
+        }
+        canvas.width = Math.round(canvas.clientWidth * escala);
+        canvas.height = Math.round(canvas.clientHeight * escala);
+        var ctx = canvas.getContext('2d');
+        ctx.scale(escala, escala);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#212529';
+    }
+
+    // 25. Punto del lapiz o del dedo dentro del canvas
+    function iniFirmaPunto(evento, canvas) {
+        var rect = canvas.getBoundingClientRect();
+        var x = 0;
+        var y = 0;
+        if (evento.touches && evento.touches.length > 0) {
+            x = evento.touches[0].clientX - rect.left;
+            y = evento.touches[0].clientY - rect.top;
+        } else {
+            x = evento.clientX - rect.left;
+            y = evento.clientY - rect.top;
+        }
+        return { x: x, y: y };
+    }
+
+    // 26. Empezar el trazo
+    function iniFirmaEmpezar(evento) {
+        var canvas = document.getElementById('iniFirmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        if (evento.cancelable) {
+            evento.preventDefault();
+        }
+        iniFirmaDibujando = true;
+        var punto = iniFirmaPunto(evento, canvas);
+        var ctx = canvas.getContext('2d');
+        ctx.beginPath();
+        ctx.moveTo(punto.x, punto.y);
+    }
+
+    // 27. Continuar el trazo mientras se mueve
+    function iniFirmaMover(evento) {
+        if (!iniFirmaDibujando) {
+            return;
+        }
+        var canvas = document.getElementById('iniFirmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        if (evento.cancelable) {
+            evento.preventDefault();
+        }
+        var punto = iniFirmaPunto(evento, canvas);
+        var ctx = canvas.getContext('2d');
+        ctx.lineTo(punto.x, punto.y);
+        ctx.stroke();
+        iniFirmaTieneTrazo = true;
+    }
+
+    // 28. Terminar el trazo
+    function iniFirmaTerminar() {
+        iniFirmaDibujando = false;
+    }
+
+    // 29. Borrar el canvas por completo
+    function iniLimpiarFirma() {
+        var canvas = document.getElementById('iniFirmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        iniFirmaTieneTrazo = false;
+        iniFirmaDibujando = false;
+    }
+
+    // 30. Atar eventos de mouse y tactil al canvas (una sola vez)
+    function iniAtarFirma() {
+        var canvas = document.getElementById('iniFirmaCanvas');
+        if (!canvas) {
+            return;
+        }
+        canvas.addEventListener('mousedown', iniFirmaEmpezar);
+        canvas.addEventListener('mousemove', iniFirmaMover);
+        canvas.addEventListener('mouseup', iniFirmaTerminar);
+        canvas.addEventListener('mouseleave', iniFirmaTerminar);
+        canvas.addEventListener('touchstart', iniFirmaEmpezar, { passive: false });
+        canvas.addEventListener('touchmove', iniFirmaMover, { passive: false });
+        canvas.addEventListener('touchend', iniFirmaTerminar);
+    }
+
     // Inicializar al cargar el documento
     jQuery(document).ready(function() {
         inicioCargarContexto();
+        iniAtarFirma();
+        iniCargarAutorizaciones();
     });
 </script>

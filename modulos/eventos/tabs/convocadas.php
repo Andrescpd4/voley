@@ -59,13 +59,12 @@
                 <th scope="col">Identificación</th>
                 <th scope="col">Categoría</th>
                 <th scope="col">Contacto Emergencia</th>
-                <th scope="col" class="text-center">Estado Convocatoria</th>
                 <th scope="col" class="text-end">Acciones</th>
             </tr>
         </thead>
         <tbody id="eveTablaConvocadasCuerpo">
             <tr>
-                <td colspan="6" class="text-center py-4 text-muted">
+                <td colspan="5" class="text-center py-4 text-muted">
                     <i class="ri-arrow-up-line me-1"></i> Seleccione un evento arriba para ver las deportistas convocadas
                 </td>
             </tr>
@@ -139,7 +138,6 @@ function eveCrearFilaConvocada(item) {
     var nombre = eveEsc(item.nombre_completo);
     var identificacion = eveEsc(item.identificacion);
     var categoria = (item.categoria_nombre ? eveEsc(item.categoria_nombre) : 'Sin categoría');
-    var badge_estado = eveBadgeEstadoConvocada(item.estado);
 
     var contacto_txt = '-';
     if (item.contacto_emergencia_nombre) {
@@ -149,14 +147,6 @@ function eveCrearFilaConvocada(item) {
         }
     }
 
-    var opciones_estado = `<select class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="eveCambiarEstadoConvocada(${convocada_id}, this.value)">
-        <option value="convocada" ${item.estado === 'convocada' ? 'selected' : ''}>Convocada</option>
-        <option value="confirmada" ${item.estado === 'confirmada' ? 'selected' : ''}>Confirmada</option>
-        <option value="rechazada" ${item.estado === 'rechazada' ? 'selected' : ''}>Rechazada</option>
-        <option value="asistio" ${item.estado === 'asistio' ? 'selected' : ''}>Asistió</option>
-        <option value="no_asistio" ${item.estado === 'no_asistio' ? 'selected' : ''}>No asistió</option>
-    </select>`;
-
     return `<tr>
         <td>
             <div class="fw-semibold text-dark">${nombre}</div>
@@ -165,10 +155,6 @@ function eveCrearFilaConvocada(item) {
         <td><code>${identificacion}</code></td>
         <td><span class="badge bg-light text-dark">${categoria}</span></td>
         <td><small class="text-muted">${contacto_txt}</small></td>
-        <td class="text-center">
-            ${badge_estado}
-            ${opciones_estado}
-        </td>
         <td class="text-end">
             <button type="button" class="btn btn-ghost-danger btn-icon btn-sm" title="Quitar de convocatoria" onclick="eveQuitarConvocada(${convocada_id}, '${nombre}')">
                 <i class="ri-user-unfollow-line"></i>
@@ -186,7 +172,7 @@ function eveRenderizarConvocadas(lista) {
 
     if (!lista || lista.length === 0) {
         cuerpo.innerHTML = `<tr>
-            <td colspan="6" class="text-center py-4 text-muted">
+            <td colspan="5" class="text-center py-4 text-muted">
                 <i class="ri-team-line fs-24 d-block mb-2"></i>
                 No hay deportistas convocadas para este evento aún.
                 <br>
@@ -253,7 +239,7 @@ function eveCargarConvocadasEvento() {
         if (btnConvocar) { btnConvocar.disabled = true; }
         if (tarjetaResumen) { tarjetaResumen.classList.add('d-none'); }
         document.getElementById('eveTablaConvocadasCuerpo').innerHTML = `<tr>
-            <td colspan="6" class="text-center py-4 text-muted">
+            <td colspan="5" class="text-center py-4 text-muted">
                 <i class="ri-arrow-up-line me-1"></i> Seleccione un evento arriba para ver las deportistas convocadas
             </td>
         </tr>`;
@@ -285,7 +271,7 @@ function eveCargarConvocadasEvento() {
     // Cargar tabla de convocadas
     var cuerpo = document.getElementById('eveTablaConvocadasCuerpo');
     cuerpo.innerHTML = `<tr>
-        <td colspan="6" class="text-center py-4 text-muted">
+        <td colspan="5" class="text-center py-4 text-muted">
             <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
             Cargando convocadas...
         </td>
@@ -301,17 +287,7 @@ function eveCargarConvocadasEvento() {
     });
 }
 
-// 6. Cambiar estado de una convocada
-function eveCambiarEstadoConvocada(convocada_id, nuevo_estado) {
-    eveAjax('cambiar_estado_convocada', { convocada_id: convocada_id, estado: nuevo_estado }, function(respuesta) {
-        if (!respuesta.error) {
-            eveMostrarMsg(respuesta.msg, 'success');
-            eveCargarConvocadasEvento();
-        }
-    });
-}
-
-// 7. Quitar a una deportista de la convocatoria
+// 6. Quitar a una deportista de la convocatoria
 function eveQuitarConvocada(convocada_id, nombre) {
     Swal.fire({
         title: '¿Remover de la convocatoria?',

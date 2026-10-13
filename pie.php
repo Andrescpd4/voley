@@ -248,5 +248,233 @@
             $("table").addClass("table table-hover");
         });
     </script>
+    <!-- Campana global de notificaciones (Fase C) -->
+    <script type="text/javascript">
+        // La campana vive en cabeza.php y funciona en todos los modulos.
+        // Llama al backend de inicio con la ruta absoluta (web_root),
+        // porque page_root cambia segun el modulo visible.
+        (function() {
+            // Evitar doble instalacion si pie.php se incluye dos veces
+            if (window.voleyCampanaLista) {
+                return;
+            }
+            window.voleyCampanaLista = true;
+
+            // Token guardado al iniciar sesion (misma llave que TOKEN_GLOBAL)
+            function voleyCampanaToken() {
+                var guardado = localStorage.getItem('stp_k_l_t');
+                if (!guardado) {
+                    return '';
+                }
+                return guardado;
+            }
+
+            // Saneamiento basico contra XSS
+            function voleyCampanaEsc(texto_crudo) {
+                if (!texto_crudo && texto_crudo !== 0) {
+                    return '';
+                }
+                return texto_crudo.toString()
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            // POST estandar hacia las acciones de notificaciones del modulo inicio
+            function voleyCampanaAjax(nombre_accion, datos_envio, funcion_retorno) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', web_root + 'inicio/' + nombre_accion, true);
+                xhr.setRequestHeader('Authorization', voleyCampanaToken());
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        try {
+                            funcion_retorno(JSON.parse(xhr.responseText));
+                        } catch (error_parseo) {
+                            funcion_retorno({ error: true });
+                        }
+                    } else {
+                        funcion_retorno({ error: true });
+                    }
+                };
+                xhr.onerror = function() {
+                    funcion_retorno({ error: true });
+                };
+                var parametros = new URLSearchParams();
+                var claves = Object.keys(datos_envio);
+                for (var i = 0; i < claves.length; i++) {
+                    parametros.append(claves[i], datos_envio[claves[i]]);
+                }
+                xhr.send(parametros.toString());
+            }
+
+            // Pintar el numero de no leidas en la insignia de la campana
+            function voleyCampanaPintarConteo(total) {
+                var insignia = document.getElementById('voleyCampanaConteo');
+                var pie = document.getElementById('voleyCampanaPie');
+                if (!insignia || !pie) {
+                    return;
+                }
+                if (total > 0) {
+                    insignia.textContent = total;
+                    insignia.classList.remove('d-none');
+                    if (total === 1) {
+                        pie.textContent = 'Tienes 1 aviso sin leer';
+                    } else {
+                        pie.textContent = 'Tienes ' + total + ' avisos sin leer';
+                    }
+                } else {
+                    insignia.classList.add('d-none');
+                    pie.textContent = 'Sin notificaciones';
+                }
+            }
+
+            // Actualizar el conteo (tambien la llaman otros modulos al responder)
+            window.voleyCampanaActualizar = function() {
+                if (!document.getElementById('voleyCampanaBoton')) {
+                    return;
+                }
+                if (voleyCampanaToken() === '') {
+                    return;
+                }
+                voleyCampanaAjax('contar_notificaciones', {}, function(respuesta) {
+                    if (respuesta.error || !respuesta.data) {
+                        return;
+                    }
+                    voleyCampanaPintarConteo(parseInt(respuesta.data.total, 10) || 0);
+                });
+            };
+
+            // Armar un renglon de aviso para la lista
+            function voleyCampanaCrearItem(aviso) {
+                var id_aviso = parseInt(aviso.id, 10) || 0;
+                var titulo = voleyCampanaEsc(aviso.titulo);
+                var mensaje = voleyCampanaEsc(aviso.mensaje);
+                var fecha = voleyCampanaEsc(aviso.creada_en);
+                var leida = parseInt(aviso.leida, 10) === 1;
+                var evento_id = parseInt(aviso.evento_id, 10) || 0;
+
+                // Destino: inicio, y al ancla de autorizaciones si es convocatoria
+                var destino = web_root + voleyCampanaEsc(aviso.url || 'inicio');
+                if (evento_id > 0) {
+                    destino = destino + '#bloqueAutorizaciones';
+                }
+
+                // Los no leidos van resaltados
+                var clase_item = 'list-group-item list-group-item-action voley-campana-item';
+                var clase_titulo = 'fw-normal';
+                if (!leida) {
+                    clase_item = clase_item + ' bg-light';
+                    clase_titulo = 'fw-semibold';
+                }
+
+                return `<a href="${destino}" data-aviso="${id_aviso}" class="${clase_item}">
+                <div class="${clase_titulo} small">${titulo}</div>
+                <div class="text-muted small">${mensaje}</div>
+                <div class="text-muted" style="font-size: 11px;">${fecha}</div>
+            </a>`;
+            }
+
+            // Cargar la lista de avisos al abrir la campana
+            function voleyCampanaCargarLista() {
+                var lista = document.getElementById('voleyCampanaLista');
+                var boton_todas = document.getElementById('voleyCampanaMarcarTodas');
+                if (!lista) {
+                    return;
+                }
+                lista.innerHTML = '<div class="text-center p-3 text-muted small">Cargando...</div>';
+                voleyCampanaAjax('listar_notificaciones', {}, function(respuesta) {
+                    if (respuesta.error || !respuesta.data) {
+                        lista.innerHTML = '<div class="text-center p-3 text-muted small">No se pudieron cargar los avisos.</div>';
+                        return;
+                    }
+                    var avisos = respuesta.data;
+                    if (avisos.length === 0) {
+                        lista.innerHTML = '<div class="text-center p-3 text-muted small">Sin notificaciones.</div>';
+                        if (boton_todas) {
+                            boton_todas.classList.add('d-none');
+                        }
+                        return;
+                    }
+                    var html_final = '';
+                    for (var i = 0; i < avisos.length; i++) {
+                        html_final = html_final + voleyCampanaCrearItem(avisos[i]);
+                    }
+                    lista.innerHTML = html_final;
+                    if (boton_todas) {
+                        boton_todas.classList.remove('d-none');
+                    }
+                });
+            }
+
+            // Marcar un aviso como leido y luego navegar a su destino
+            function voleyCampanaAbrirAviso(elemento, destino) {
+                var id_aviso = parseInt(elemento.getAttribute('data-aviso'), 10) || 0;
+                if (id_aviso <= 0) {
+                    window.location.href = destino;
+                    return;
+                }
+                voleyCampanaAjax('marcar_notificacion', { id: id_aviso }, function() {
+                    window.voleyCampanaActualizar();
+                    window.location.href = destino;
+                });
+            }
+
+            // Atar eventos una sola vez al cargar cada pagina
+            function voleyCampanaIniciar() {
+                var boton = document.getElementById('voleyCampanaBoton');
+                if (!boton) {
+                    return;
+                }
+                if (voleyCampanaToken() === '') {
+                    return;
+                }
+
+                // Abrir: cargar la lista fresca
+                boton.addEventListener('click', function() {
+                    voleyCampanaCargarLista();
+                });
+
+                // Clic en un aviso: marcar leido y navegar
+                var lista = document.getElementById('voleyCampanaLista');
+                if (lista) {
+                    lista.addEventListener('click', function(evento) {
+                        var elemento = null;
+                        if (evento.target.closest) {
+                            elemento = evento.target.closest('.voley-campana-item');
+                        }
+                        if (!elemento) {
+                            return;
+                        }
+                        evento.preventDefault();
+                        voleyCampanaAbrirAviso(elemento, elemento.getAttribute('href'));
+                    });
+                }
+
+                // Marcar todas como leidas
+                var boton_todas = document.getElementById('voleyCampanaMarcarTodas');
+                if (boton_todas) {
+                    boton_todas.addEventListener('click', function() {
+                        voleyCampanaAjax('marcar_notificacion', { id: 0 }, function() {
+                            voleyCampanaCargarLista();
+                            window.voleyCampanaActualizar();
+                        });
+                    });
+                }
+
+                // Conteo inicial y refresco cada minuto
+                window.voleyCampanaActualizar();
+                setInterval(window.voleyCampanaActualizar, 60000);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', voleyCampanaIniciar);
+            } else {
+                voleyCampanaIniciar();
+            }
+        })();
+    </script>
 </body>
 </html>
