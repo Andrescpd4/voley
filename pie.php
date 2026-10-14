@@ -255,10 +255,12 @@
         // porque page_root cambia segun el modulo visible.
         (function() {
             // Evitar doble instalacion si pie.php se incluye dos veces
-            if (window.voleyCampanaLista) {
+            // Ojo: no usar voleyCampanaLista como bandera porque ese id ya existe
+            // en cabeza.php y el navegador lo convierte en variable global
+            if (window.voleyCampanaInstalada) {
                 return;
             }
-            window.voleyCampanaLista = true;
+            window.voleyCampanaInstalada = true;
 
             // Token guardado al iniciar sesion (misma llave que TOKEN_GLOBAL)
             function voleyCampanaToken() {
