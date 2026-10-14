@@ -424,6 +424,63 @@
                 });
             }
 
+            // Ultimo aviso visto por el SSE (para retomar sin perder nada)
+            var voleyCampanaUltimoId = 0;
+            var voleyCampanaPollingActivo = false;
+
+            // Respaldo: conteo inicial y refresco cada minuto (si el SSE falla)
+            function voleyCampanaIniciarPolling() {
+                if (voleyCampanaPollingActivo) {
+                    return;
+                }
+                voleyCampanaPollingActivo = true;
+                window.voleyCampanaActualizar();
+                setInterval(window.voleyCampanaActualizar, 60000);
+            }
+
+            // Canal en vivo: el servidor empuja avisos al instante
+            function voleyCampanaIniciarSSE() {
+                // Sin soporte de SSE en el navegador, usar el respaldo
+                if (!window.EventSource) {
+                    voleyCampanaIniciarPolling();
+                    return;
+                }
+                var fuente = new EventSource(web_root + 'inicio/avisos_tiempo_real?ultimo_id=' + voleyCampanaUltimoId);
+
+                // Llego un aviso nuevo: actualizar numero y lista si esta abierta
+                fuente.addEventListener('aviso', function(evento) {
+                    try {
+                        var aviso = JSON.parse(evento.data);
+                        var id_aviso = parseInt(aviso.id, 10) || 0;
+                        if (id_aviso > voleyCampanaUltimoId) {
+                            voleyCampanaUltimoId = id_aviso;
+                        }
+                    } catch (error_datos) {
+                        // Si el dato viene raro, igual se refresca el conteo
+                    }
+                    window.voleyCampanaActualizar();
+                    var lista = document.getElementById('voleyCampanaLista');
+                    if (lista) {
+                        var menu = lista.closest('.dropdown-menu');
+                        if (menu) {
+                            if (menu.classList.contains('show')) {
+                                voleyCampanaCargarLista();
+                            }
+                        }
+                    }
+                });
+
+                // Si el canal se corta, caer al respaldo sin mostrar errores
+                fuente.onerror = function() {
+                    try {
+                        fuente.close();
+                    } catch (error_cierre) {
+                        // No hay nada que hacer si ya estaba cerrada
+                    }
+                    voleyCampanaIniciarPolling();
+                };
+            }
+
             // Atar eventos una sola vez al cargar cada pagina
             function voleyCampanaIniciar() {
                 var boton = document.getElementById('voleyCampanaBoton');
@@ -466,9 +523,9 @@
                     });
                 }
 
-                // Conteo inicial y refresco cada minuto
+                // Conteo inicial por el canal en vivo (con respaldo a polling)
                 window.voleyCampanaActualizar();
-                setInterval(window.voleyCampanaActualizar, 60000);
+                voleyCampanaIniciarSSE();
             }
 
             if (document.readyState === 'loading') {

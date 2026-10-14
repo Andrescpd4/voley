@@ -7,17 +7,19 @@ namespace Composer\Autoload;
 class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
 {
     public static $files = array (
-        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
+        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
+        'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
         '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
         '23f09fe3194f8c2f70923f90d6702129' => __DIR__ . '/..' . '/illuminate/collections/functions.php',
         '60799491728b879e74601d83e38b2cad' => __DIR__ . '/..' . '/illuminate/collections/helpers.php',
+        '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
         '2203a247e6fda86070a5e4e07aed533a' => __DIR__ . '/..' . '/symfony/clock/Resources/now.php',
         'a1105708a18b76903365ca1c4aa61b02' => __DIR__ . '/..' . '/symfony/translation/Resources/functions.php',
+        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         'f625ee536139dfb962a398b200bdb2bd' => __DIR__ . '/..' . '/illuminate/support/functions.php',
         '72579e7bd17821bb1321b87411366eae' => __DIR__ . '/..' . '/illuminate/support/helpers.php',
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
-        'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -34,17 +36,28 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
             'Symfony\\Contracts\\Translation\\' => 30,
             'Symfony\\Component\\Translation\\' => 30,
             'Symfony\\Component\\Clock\\' => 24,
+            'SpomkyLabs\\Pki\\' => 15,
         ),
         'P' =>
         array (
             'Psr\\SimpleCache\\' => 16,
+            'Psr\\Http\\Message\\' => 17,
+            'Psr\\Http\\Client\\' => 16,
             'Psr\\Container\\' => 14,
             'Psr\\Clock\\' => 10,
             'PhpOption\\' => 10,
         ),
+        'M' =>
+        array (
+            'Minishlink\\WebPush\\' => 19,
+        ),
         'L' =>
         array (
             'Laravel\\SerializableClosure\\' => 28,
+        ),
+        'J' =>
+        array (
+            'Jose\\Component\\' => 15,
         ),
         'I' =>
         array (
@@ -55,6 +68,9 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
         ),
         'G' =>
         array (
+            'GuzzleHttp\\Psr7\\' => 16,
+            'GuzzleHttp\\Promise\\' => 19,
+            'GuzzleHttp\\' => 11,
             'GrahamCampbell\\ResultType\\' => 26,
         ),
         'F' =>
@@ -74,6 +90,7 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
         'B' =>
         array (
             'Brick\\Math\\' => 11,
+            'Base64Url\\' => 10,
         ),
     );
 
@@ -110,9 +127,22 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
         array (
             0 => __DIR__ . '/..' . '/symfony/clock',
         ),
+        'SpomkyLabs\\Pki\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/spomky-labs/pki-framework/src',
+        ),
         'Psr\\SimpleCache\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/simple-cache/src',
+        ),
+        'Psr\\Http\\Message\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Psr\\Http\\Client\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-client/src',
         ),
         'Psr\\Container\\' =>
         array (
@@ -126,9 +156,17 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
         array (
             0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
         ),
+        'Minishlink\\WebPush\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/minishlink/web-push/src',
+        ),
         'Laravel\\SerializableClosure\\' =>
         array (
             0 => __DIR__ . '/..' . '/laravel/serializable-closure/src',
+        ),
+        'Jose\\Component\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/web-token/jwt-library',
         ),
         'Illuminate\\Support\\' =>
         array (
@@ -148,6 +186,18 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
         'Illuminate\\Container\\' =>
         array (
             0 => __DIR__ . '/..' . '/illuminate/container',
+        ),
+        'GuzzleHttp\\Psr7\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/guzzlehttp/psr7/src',
+        ),
+        'GuzzleHttp\\Promise\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/guzzlehttp/promises/src',
+        ),
+        'GuzzleHttp\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/guzzlehttp/guzzle/src',
         ),
         'GrahamCampbell\\ResultType\\' =>
         array (
@@ -176,6 +226,10 @@ class ComposerStaticInitc04323fcde1ade218b3442c56ad63015
         'Brick\\Math\\' =>
         array (
             0 => __DIR__ . '/..' . '/brick/math/src',
+        ),
+        'Base64Url\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/spomky-labs/base64url/src',
         ),
     );
 

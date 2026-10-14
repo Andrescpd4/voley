@@ -310,6 +310,31 @@ if (strpos($foto_actual, 'http') !== 0 && strpos($foto_actual, '/') !== 0) {
                             </div>
                         </div>
                     </form>
+
+                    <!-- ============================================================ -->
+                    <!-- TARJETA: AVISOS PUSH DEL NAVEGADOR (Fase F)                  -->
+                    <!-- ============================================================ -->
+                    <div class="card mt-3" id="perfilPushBarra">
+                        <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="badge bg-primary p-2">
+                                    <i class="ri-notification-3-line fs-5 text-white"></i>
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Avisos en tu celular o computador</div>
+                                    <small class="text-muted">Activa para enterarte aunque tengas la pagina cerrada.</small>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" id="perfilPushActivar" class="btn btn-primary d-none" onclick="perfilPushActivar()">
+                                    <i class="ri-notification-line me-1"></i> Activar
+                                </button>
+                                <button type="button" id="perfilPushDesactivar" class="btn btn-outline-secondary d-none" onclick="perfilPushDesactivar()">
+                                    <i class="ri-notification-off-line me-1"></i> Desactivar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ============================================================ -->
@@ -1124,6 +1149,196 @@ function perfilDescargarFicha() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+// ------------------------------------------------------------
+// 14. AVISOS PUSH DEL NAVEGADOR (Fase F: pagina cerrada)
+// ------------------------------------------------------------
+
+// Clave publica VAPID del servidor (viene del .env)
+var perfilPushVapid = '<?php if (isset($_ENV['VAPID_PUBLIC'])) { echo $_ENV['VAPID_PUBLIC']; } ?>';
+
+// Mostrar el boton correcto segun el estado
+function perfilPushBotones(estado) {
+    var barra = document.getElementById('perfilPushBarra');
+    var activar = document.getElementById('perfilPushActivar');
+    var desactivar = document.getElementById('perfilPushDesactivar');
+    if (!barra || !activar || !desactivar) {
+        return;
+    }
+    if (estado === 'activar') {
+        activar.classList.remove('d-none');
+        desactivar.classList.add('d-none');
+    } else if (estado === 'desactivar') {
+        activar.classList.add('d-none');
+        desactivar.classList.remove('d-none');
+    } else {
+        barra.classList.add('d-none');
+    }
+}
+
+// Convertir la clave VAPID (base64url) a bytes, como pide el navegador
+function perfilPushClaveBytes(clave) {
+    var sin_relleno = clave.replace(/=+$/, '');
+    var base64 = sin_relleno.replace(/-/g, '+').replace(/_/g, '/');
+    var decodificado = atob(base64);
+    var bytes = new Uint8Array(decodificado.length);
+    for (var i = 0; i < decodificado.length; i++) {
+        bytes[i] = decodificado.charCodeAt(i);
+    }
+    return bytes;
+}
+
+// POST estandar hacia las acciones push del modulo inicio
+function perfilPushAjax(nombre_accion, datos_envio, funcion_retorno) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', web_root + 'inicio/' + nombre_accion, true);
+    xhr.setRequestHeader('Authorization', TOKEN_GLOBAL);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                funcion_retorno(JSON.parse(xhr.responseText));
+            } catch (error_parseo) {
+                funcion_retorno({ error: true });
+            }
+        } else {
+            funcion_retorno({ error: true });
+        }
+    };
+    xhr.onerror = function() {
+        funcion_retorno({ error: true });
+    };
+    var parametros = new URLSearchParams();
+    var claves = Object.keys(datos_envio);
+    for (var i = 0; i < claves.length; i++) {
+        parametros.append(claves[i], datos_envio[claves[i]]);
+    }
+    xhr.send(parametros.toString());
+}
+
+// Pasar las llaves de bytes a base64 para guardarlas en el servidor
+function perfilPushLlaveB64(suscripcion, nombre_llave) {
+    var cruda = new Uint8Array(suscripcion.getKey(nombre_llave));
+    var texto = '';
+    for (var i = 0; i < cruda.length; i++) {
+        texto = texto + String.fromCharCode(cruda[i]);
+    }
+    return btoa(texto);
+}
+
+// Guardar la suscripcion del navegador en el servidor
+function perfilPushGuardar(suscripcion) {
+    perfilPushAjax('guardar_suscripcion', {
+        endpoint: suscripcion.endpoint,
+        p256dh: perfilPushLlaveB64(suscripcion, 'p256dh'),
+        auth: perfilPushLlaveB64(suscripcion, 'auth'),
+        user_agent: navigator.userAgent
+    }, function(respuesta) {
+        if (respuesta.error) {
+            perfilPushBotones('activar');
+            return;
+        }
+        perfilPushBotones('desactivar');
+    });
+}
+
+// Quitar la suscripcion del navegador en el servidor
+function perfilPushQuitar(endpoint) {
+    perfilPushAjax('eliminar_suscripcion', {
+        endpoint: endpoint
+    }, function(respuesta) {
+        if (!respuesta.error) {
+            perfilPushBotones('activar');
+        }
+    });
+}
+
+// Activar los avisos (permiso + registro + suscripcion)
+function perfilPushActivar() {
+    // 1. Si el navegador no los soporta, ocultar la tarjeta
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        perfilPushBotones('oculto');
+        return;
+    }
+    // 2. Pedir el permiso al usuario (el navegador muestra su pregunta)
+    Notification.requestPermission().then(function(permiso) {
+        // 3. Si no acepto, quedarse en activar
+        if (permiso !== 'granted') {
+            perfilPushBotones('activar');
+            return;
+        }
+        // 4. Registrar el sw.js y suscribir el navegador
+        navigator.serviceWorker.register(web_root + 'sw.js', { updateViaCache: 'none' }).then(function(registro) {
+            registro.update();
+            return registro.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: perfilPushClaveBytes(perfilPushVapid)
+            });
+        }).then(function(suscripcion) {
+            // 5. Guardar la suscripcion en el servidor
+            perfilPushGuardar(suscripcion);
+        }).catch(function(error_suscripcion) {
+            perfilPushBotones('activar');
+        });
+    });
+}
+
+// Desactivar los avisos (quitar del navegador y del servidor)
+function perfilPushDesactivar() {
+    // 1. Buscar la suscripcion actual del navegador
+    navigator.serviceWorker.getRegistration().then(function(registro) {
+        if (!registro) {
+            return null;
+        }
+        return registro.pushManager.getSubscription();
+    }).then(function(suscripcion) {
+        // 2. Si no hay, solo mostrar activar
+        if (!suscripcion) {
+            perfilPushBotones('activar');
+            return;
+        }
+        // 3. Quitarla del navegador y avisar al servidor
+        var endpoint = suscripcion.endpoint;
+        suscripcion.unsubscribe().then(function() {
+            perfilPushQuitar(endpoint);
+        });
+    });
+}
+
+// Al abrir el perfil: mostrar el boton segun el estado actual
+function perfilPushEstadoInicial() {
+    // 1. Sin clave VAPID, sin soporte o con permiso negado: ocultar
+    if (perfilPushVapid === '' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+        perfilPushBotones('oculto');
+        return;
+    }
+    if (Notification.permission === 'denied') {
+        perfilPushBotones('oculto');
+        return;
+    }
+    // 2. Revisar si el navegador ya tiene suscripcion activa
+    navigator.serviceWorker.getRegistration().then(function(registro) {
+        if (!registro) {
+            perfilPushBotones('activar');
+            return;
+        }
+        return registro.pushManager.getSubscription();
+    }).then(function(suscripcion) {
+        if (suscripcion) {
+            perfilPushBotones('desactivar');
+        } else {
+            perfilPushBotones('activar');
+        }
+    }).catch(function(error_estado) {
+        perfilPushBotones('activar');
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', perfilPushEstadoInicial);
+} else {
+    perfilPushEstadoInicial();
 }
 
 </script>

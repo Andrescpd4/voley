@@ -1007,7 +1007,7 @@ class Formulario extends clase_base
             return;
         }
 
-        $filas = $this->db->select_all("SELECT id, titulo, mensaje, url, evento_id, leida, creada_en FROM notificaciones WHERE persona_id = '$persona_id' ORDER BY id DESC LIMIT 10");
+        $filas = $this->db->select_all("SELECT id, titulo, mensaje, url, evento_id, tipo, leida, creada_en FROM notificaciones WHERE persona_id = '$persona_id' ORDER BY id DESC LIMIT 10");
         if (!is_array($filas)) {
             $filas = array();
         }
@@ -1068,6 +1068,199 @@ class Formulario extends clase_base
         }
 
         echo json_encode(array('error' => false, 'msg' => 'ok'));
+    }
+
+    // ============================================================
+    // AVISOS EN VIVO (Fase F: SSE + Push del navegador)
+    // El SSE mantiene una conexion abierta y empuja avisos al instante,
+    // sin preguntar cada 30-60 segundos (adiós al polling corto).
+    // ============================================================
+
+    // 26. Canal SSE de avisos en vivo (GET, usa cookie de sesion)
+    function avisos_tiempo_real()
+    {
+        // 1. Solo el dueno de la sesion puede abrir su canal
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            header('Content-Type: text/event-stream; charset=utf-8');
+            echo "event: error\n";
+            echo "data: {\"msg\":\"Sesion no valida\"}\n\n";
+            exit;
+        }
+
+        // 2. Soltar la sesion para no bloquear las demas paginas del usuario
+        if (function_exists('session_write_close')) {
+            session_write_close();
+        }
+
+        // 3. Permitir que el script viva hasta que el hosting lo corte
+        @set_time_limit(0);
+        if (function_exists('ignore_user_abort')) {
+            @ignore_user_abort(true);
+        }
+
+        // 4. Cabeceras del canal + anti-bufer (si no, el hosting retiene todo)
+        header('Content-Type: text/event-stream; charset=utf-8');
+        header('Cache-Control: no-cache');
+        header('X-Accel-Buffering: no');
+        if (function_exists('apache_setenv')) {
+            @apache_setenv('no-gzip', 1);
+        }
+        @ini_set('zlib.output_compression', 0);
+        @ini_set('implicit_flush', 1);
+        if (function_exists('ob_implicit_flush')) {
+            @ob_implicit_flush(1);
+        }
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+
+        // 5. Retomar desde el ultimo aviso visto (reconexion sin perder nada)
+        $ultimo_id = 0;
+        if (isset($_GET['ultimo_id'])) {
+            $ultimo_id = intval($_GET['ultimo_id']);
+        } else if (isset($_SERVER['HTTP_LAST_EVENT_ID'])) {
+            $ultimo_id = intval($_SERVER['HTTP_LAST_EVENT_ID']);
+        }
+        if ($ultimo_id < 0) {
+            $ultimo_id = 0;
+        }
+
+        // 6. Bucle corto: tope de vueltas por si el hosting no corta solo
+        $vuelta = 0;
+        $tope_vueltas = 40;
+        while (!connection_aborted()) {
+            if ($vuelta >= $tope_vueltas) {
+                break;
+            }
+            $vuelta = $vuelta + 1;
+
+            // 7. Una sola consulta indexada: mis avisos nuevos sin leer
+            $sql = "SELECT id, titulo, mensaje, url, evento_id, tipo, creada_en FROM notificaciones WHERE persona_id = '$persona_id' AND id > '$ultimo_id' AND leida = 0 ORDER BY id ASC LIMIT 20";
+            $nuevos = $this->db->select_all($sql);
+            if (!is_array($nuevos)) {
+                $nuevos = array();
+            }
+            for ($i = 0; $i < count($nuevos); $i++) {
+                $id_aviso = 0;
+                if (isset($nuevos[$i]['id'])) {
+                    $id_aviso = intval($nuevos[$i]['id']);
+                }
+                if ($id_aviso > $ultimo_id) {
+                    $ultimo_id = $id_aviso;
+                }
+                echo "id: " . $id_aviso . "\n";
+                echo "event: aviso\n";
+                echo "data: " . json_encode($nuevos[$i], JSON_UNESCAPED_UNICODE) . "\n\n";
+            }
+            if (count($nuevos) > 0) {
+                @flush();
+            } else {
+                // 8. Latido cada 16 segundos para que el proxy no corte por inactivo
+                if (($vuelta % 2) === 0) {
+                    echo ": latido\n\n";
+                    @flush();
+                }
+            }
+
+            // 9. Esperar 8 segundos antes de volver a preguntar a la BD
+            sleep(8);
+        }
+        exit;
+    }
+
+    // 27. Guardar la suscripcion push del navegador del usuario logueado
+    function guardar_suscripcion()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        // 1. Leer los datos que envia el navegador
+        if (isset($_POST['endpoint'])) {
+            $endpoint = trim($_POST['endpoint']);
+        } else {
+            $endpoint = '';
+        }
+        if (isset($_POST['p256dh'])) {
+            $llave_p256 = trim($_POST['p256dh']);
+        } else {
+            $llave_p256 = '';
+        }
+        if (isset($_POST['auth'])) {
+            $llave_auth = trim($_POST['auth']);
+        } else {
+            $llave_auth = '';
+        }
+        if (isset($_POST['user_agent'])) {
+            $agente = substr(trim($_POST['user_agent']), 0, 250);
+        } else {
+            $agente = '';
+        }
+
+        // 2. Que no falte ningun dato
+        if ($endpoint === '' || $llave_p256 === '' || $llave_auth === '') {
+            $this->_error_muro('Faltan los datos de la suscripcion');
+            return;
+        }
+
+        // 3. Si ya existia este endpoint, actualizarlo; si no, crearlo
+        $existe = $this->db->select_row("SELECT id FROM push_suscripciones WHERE endpoint = '" . $this->db->escape_string($endpoint) . "'");
+        if (is_array($existe)) {
+            if (isset($existe['id'])) {
+                $this->db->update('push_suscripciones', array(
+                    'persona_id' => $persona_id,
+                    'p256dh' => $llave_p256,
+                    'auth' => $llave_auth,
+                    'user_agent' => $agente
+                ), array('id' => intval($existe['id'])));
+                echo json_encode(array('error' => false, 'msg' => 'Suscripcion actualizada'));
+                return;
+            }
+        }
+        $this->db->insert('push_suscripciones', array(
+            'persona_id' => $persona_id,
+            'endpoint' => $endpoint,
+            'p256dh' => $llave_p256,
+            'auth' => $llave_auth,
+            'user_agent' => $agente
+        ));
+        echo json_encode(array('error' => false, 'msg' => 'Suscripcion guardada'));
+    }
+
+    // 28. Quitar la suscripcion push del navegador del usuario logueado
+    function eliminar_suscripcion()
+    {
+        if (!$this->_token_muro()) {
+            return;
+        }
+
+        $persona_id = $this->_persona_muro();
+        if ($persona_id <= 0) {
+            $this->_error_muro('Sesion no valida');
+            return;
+        }
+
+        // 1. Leer el endpoint que manda el navegador
+        if (isset($_POST['endpoint'])) {
+            $endpoint = trim($_POST['endpoint']);
+        } else {
+            $endpoint = '';
+        }
+        if ($endpoint === '') {
+            $this->_error_muro('Falta el endpoint');
+            return;
+        }
+
+        // 2. Borrar solo mis suscripciones (por seguridad)
+        $this->db->query("DELETE FROM push_suscripciones WHERE endpoint = '" . $this->db->escape_string($endpoint) . "' AND persona_id = '$persona_id'");
+        echo json_encode(array('error' => false, 'msg' => 'Suscripcion eliminada'));
     }
 
     // 19. Eliminar una publicacion (solo administradores)

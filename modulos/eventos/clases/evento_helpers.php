@@ -543,10 +543,23 @@ class EventosHelpers
                 'mensaje' => $texto_aviso,
                 'url' => 'inicio',
                 'evento_id' => $id_evento,
+                'tipo' => 'convocatoria',
                 'leida' => 0
             );
             $this->db->insert('notificaciones', $aviso);
             $total_avisos = $total_avisos + 1;
+
+            // Push al celular/escritorio sin frenar la convocatoria si falla
+            if (function_exists('enviar_push_navegador')) {
+                try {
+                    enviar_push_navegador($acudiente_id, $titulo_aviso, $texto_aviso, 'inicio');
+                } catch (Exception $e) {
+                    // Se deja constancia y se sigue con el siguiente acudiente
+                    if (function_exists('registrar_log_push')) {
+                        registrar_log_push('Push convocatoria omitido: ' . $e->getMessage());
+                    }
+                }
+            }
         }
         return $total_avisos;
     }

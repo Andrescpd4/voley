@@ -138,26 +138,192 @@ function insertar_bitacora($tipo,$nuevos,$mensaje,$viejos=false){
     $db->insert("admin_bitacoras_sistema",$insertar);
 }
 
-// Crear una notificación para un usuario (campana / puntos rojos del sistema)
-// Cualquier módulo la puede usar: solo recibe a quién, en qué menú y qué dice.
-function crear_notificacion($persona_id, $menu, $tipo, $texto, $url_destino)
+// Crear un aviso en la campana y, si se pide, tambien push al navegador.
+// Firma compatible con el uso viejo de documentos.php: los parametros
+// menu/tipo/texto/url_destino se mapean a las columnas reales.
+// $con_push = true intenta el push pero nunca rompe la operacion principal.
+// $evento_id = 0 cuando el aviso no es de un evento (ej: desprendible).
+function crear_notificacion($persona_id, $menu, $tipo, $texto, $url_destino, $con_push = false, $evento_id = 0)
 {
     global $db;
 
     // 1. Si no hay usuario destino, no se hace nada
-    if ((int)$persona_id <= 0) {
+    $id_persona = intval($persona_id);
+    if ($id_persona <= 0) {
         return false;
     }
 
-    // 2. Insertar la fila en la tabla genérica de notificaciones
+    // 2. Mapear a las columnas reales de la tabla notificaciones
+    if ($texto !== '') {
+        $titulo_aviso = $texto;
+        $mensaje_aviso = $texto;
+    } else {
+        $titulo_aviso = $tipo;
+        $mensaje_aviso = $tipo;
+    }
+    if ($url_destino !== '') {
+        $url_aviso = $url_destino;
+    } else {
+        $url_aviso = 'inicio';
+    }
+    if ($tipo !== '') {
+        $tipo_aviso = $tipo;
+    } else {
+        $tipo_aviso = 'general';
+    }
+    $id_evento = intval($evento_id);
+
+    // 3. Guardar el aviso en la campana
     $datos = array(
-        'persona_id' => (int)$persona_id,
-        'menu' => $menu,
-        'tipo' => $tipo,
-        'texto' => $texto,
-        'url_destino' => $url_destino,
+        'persona_id' => $id_persona,
+        'titulo' => $titulo_aviso,
+        'mensaje' => $mensaje_aviso,
+        'url' => $url_aviso,
+        'evento_id' => $id_evento,
+        'tipo' => $tipo_aviso,
+        'leida' => 0
     );
-    return $db->insert('notificaciones', $datos);
+    $nuevo_id = $db->insert('notificaciones', $datos);
+    if (!$nuevo_id) {
+        return false;
+    }
+
+    // 4. Push opcional al navegador (con seguro: si falla, igual queda la campana)
+    if ($con_push) {
+        try {
+            enviar_push_navegador($id_persona, $titulo_aviso, $mensaje_aviso, $url_aviso);
+        } catch (Exception $e) {
+            registrar_log_push('Push omitido para persona ' . $id_persona . ': ' . $e->getMessage());
+        }
+    }
+
+    return $nuevo_id;
+}
+
+// Guardar una linea en el log de push (misma carpeta del log del sistema)
+function registrar_log_push($texto)
+{
+    // 1. Carpeta y nombre del archivo de log
+    $base_log = 'storage/logs/logs_';
+    if (isset($_ENV['RUTA_LOG'])) {
+        if ($_ENV['RUTA_LOG'] !== '') {
+            $base_log = $_ENV['RUTA_LOG'];
+        }
+    }
+    if (defined('PATH_ROOT')) {
+        $raiz_sistema = PATH_ROOT;
+    } else {
+        $raiz_sistema = dirname(__FILE__, 2);
+    }
+    $archivo = $raiz_sistema . '/' . $base_log . date('Y_m_d') . '_push.log';
+
+    // 2. Agregar la linea al final del archivo (lo crea si no existe)
+    file_put_contents($archivo, date('Y-m-d H:i:s') . ' ' . $texto . PHP_EOL, FILE_APPEND);
+}
+
+// Enviar push del navegador a una persona (todas sus suscripciones).
+// Nunca lanza excepcion: devuelve arreglo de resultados (vacio si no se pudo).
+function enviar_push_navegador($persona_id, $titulo, $mensaje, $url)
+{
+    global $db;
+
+    // 1. Anotar el intento en el log
+    $id_persona = intval($persona_id);
+    registrar_log_push('Inicio push "' . $titulo . '" para persona ' . $id_persona);
+
+    // 2. Sin libreria web-push no se puede enviar
+    if (!class_exists('Minishlink\WebPush\WebPush')) {
+        registrar_log_push('Libreria web-push no instalada, se omite el push');
+        return array();
+    }
+
+    // 3. Leer las claves VAPID del .env
+    $clave_publica = '';
+    $clave_privada = '';
+    $asunto = '';
+    if (isset($_ENV['VAPID_PUBLIC'])) {
+        $clave_publica = trim($_ENV['VAPID_PUBLIC']);
+    }
+    if (isset($_ENV['VAPID_PRIVATE'])) {
+        $clave_privada = trim($_ENV['VAPID_PRIVATE']);
+    }
+    if (isset($_ENV['VAPID_SUBJECT'])) {
+        $asunto = trim($_ENV['VAPID_SUBJECT']);
+    }
+    if ($clave_publica === '' || $clave_privada === '') {
+        registrar_log_push('Faltan claves VAPID en el .env, se omite el push');
+        return array();
+    }
+    if ($asunto === '') {
+        $asunto = 'http://localhost/voley/';
+    }
+
+    // 4. Traer las suscripciones de la persona
+    $sql = "SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE persona_id = '" . $id_persona . "'";
+    $suscripciones = $db->select_all($sql);
+    if (!is_array($suscripciones)) {
+        $suscripciones = array();
+    }
+    registrar_log_push('Persona ' . $id_persona . ' tiene ' . count($suscripciones) . ' suscripcion(es)');
+    if (count($suscripciones) === 0) {
+        return array();
+    }
+
+    // 5. Enviar a cada suscripcion y recoger resultados
+    try {
+        $cliente = new Minishlink\WebPush\WebPush(array(
+            'VAPID' => array(
+                'subject' => $asunto,
+                'publicKey' => $clave_publica,
+                'privateKey' => $clave_privada
+            )
+        ));
+        $contenido = json_encode(array('title' => $titulo, 'body' => $mensaje, 'url' => $url));
+        for ($i = 0; $i < count($suscripciones); $i++) {
+            $suscripcion = Minishlink\WebPush\Subscription::create(array(
+                'endpoint' => $suscripciones[$i]['endpoint'],
+                'keys' => array(
+                    'p256dh' => $suscripciones[$i]['p256dh'],
+                    'auth' => $suscripciones[$i]['auth']
+                )
+            ));
+            $cliente->queueNotification($suscripcion, $contenido);
+        }
+        $resultados = array();
+        foreach ($cliente->flush() as $reporte) {
+            $resumen = array(
+                'endpoint' => substr($reporte->getEndpoint(), 0, 60),
+                'exito' => $reporte->isSuccess(),
+                'estado' => 0,
+                'motivo' => ''
+            );
+            if (!$reporte->isSuccess()) {
+                $respuesta = $reporte->getResponse();
+                if ($respuesta) {
+                    $resumen['estado'] = $respuesta->getStatusCode();
+                }
+                $resumen['motivo'] = $reporte->getReason();
+                registrar_log_push('Error push ' . $resumen['estado'] . ' en ' . $resumen['endpoint'] . ' - ' . $resumen['motivo']);
+                // 404 o 410: el navegador ya no existe, borrar la suscripcion
+                if ($resumen['estado'] === 404 || $resumen['estado'] === 410) {
+                    $sql_borrar = "DELETE FROM push_suscripciones WHERE endpoint = '" . $db->escape_string($reporte->getEndpoint()) . "'";
+                    $db->query($sql_borrar);
+                }
+            }
+            $resultados[] = $resumen;
+        }
+        $entregados = 0;
+        for ($j = 0; $j < count($resultados); $j++) {
+            if ($resultados[$j]['exito']) {
+                $entregados = $entregados + 1;
+            }
+        }
+        registrar_log_push('Resultado push: ' . $entregados . ' de ' . count($resultados) . ' entregados');
+        return $resultados;
+    } catch (Exception $e) {
+        registrar_log_push('Excepcion al enviar push: ' . $e->getMessage());
+        return array();
+    }
 }
 
 function escape_string($v){

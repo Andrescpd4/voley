@@ -13,10 +13,14 @@ try {
     set_time_limit(2000);
 
     // 1. Acciones que admiten GET (solo lectura)
-    $acciones_get = ['estructura', 'carpetas', 'documentos', 'dashboard'];
+    // avisos_tiempo_real es el canal SSE: EventSource solo habla por GET
+    $acciones_get = ['estructura', 'carpetas', 'documentos', 'dashboard', 'avisos_tiempo_real'];
 
     // 2. Acciones que devuelven binario (ZIP, PDF, Excel)
     $acciones_binarias = [];
+
+    // 2b. Acciones que ponen sus propias cabeceras (no son JSON)
+    $acciones_sin_json = ['avisos_tiempo_real'];
 
     // 3. Determinar ACCION
     $accion = '';
@@ -40,9 +44,10 @@ try {
     // 5. Definir ACCION para el despachador
     define('ACCION', $accion);
 
-    // 6. Content-Type JSON solo si NO es binario
+    // 6. Content-Type JSON solo si NO es binario ni pone sus cabeceras
     $es_binario = in_array($accion, $acciones_binarias);
-    if (!$es_binario) {
+    $pone_cabeceras = in_array($accion, $acciones_sin_json);
+    if (!$es_binario && !$pone_cabeceras) {
         header('Content-Type: application/json; charset=utf-8');
     }
 
