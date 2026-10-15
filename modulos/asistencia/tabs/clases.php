@@ -52,7 +52,12 @@
 function asiCrearFilaClase(item) {
     var id = parseInt(item.id);
     var nombre = asiEsc(item.nombre);
-    var lugar = asiEsc(item.lugar);
+
+    // Si no se escribio lugar, mostrar Sin especificar
+    var lugar = 'Sin especificar';
+    if (item.lugar) {
+        lugar = asiEsc(item.lugar);
+    }
 
     var categoria_txt = 'General';
     if (item.categoria_nombre) {
@@ -76,7 +81,7 @@ function asiCrearFilaClase(item) {
     // Solo las abiertas sin registros se pueden eliminar
     var botones = '';
     if (item.estado === 'abierta') {
-        botones = `<button type="button" class="btn btn-ghost-danger btn-icon btn-sm accion-eliminar_clase" title="Eliminar" onclick="asiEliminarClase(${id})">
+        botones = `<button type="button" class="btn btn-ghost-danger btn-icon btn-sm asi-toque accion-eliminar_clase" title="Eliminar" onclick="asiEliminarClase(${id})">
                 <i class="ri-delete-bin-line"></i>
             </button>`;
     } else {
@@ -134,7 +139,7 @@ function asiEliminarClase(id) {
         showCancelButton: true,
         confirmButtonText: 'Si, eliminar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#f06548'
+        confirmButtonColor: 'var(--vz-danger)'
     }).then(function(resultado) {
         if (resultado.isConfirmed) {
             asiAjax('eliminar_clase', { id: id }, function(respuesta) {

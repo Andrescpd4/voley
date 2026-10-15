@@ -14,21 +14,21 @@
 <!-- Filtros del periodo -->
 <div class="row g-3 mb-3 align-items-end">
     <div class="col-md-3">
-        <label class="form-label text-muted small mb-1">Desde</label>
+        <label class="form-label text-muted small mb-1" for="asiFiltroDesde">Desde</label>
         <input type="date" id="asiFiltroDesde" class="form-control form-control-sm">
     </div>
     <div class="col-md-3">
-        <label class="form-label text-muted small mb-1">Hasta</label>
+        <label class="form-label text-muted small mb-1" for="asiFiltroHasta">Hasta</label>
         <input type="date" id="asiFiltroHasta" class="form-control form-control-sm">
     </div>
     <div class="col-md-3">
-        <label class="form-label text-muted small mb-1">Categoria</label>
+        <label class="form-label text-muted small mb-1" for="asiFiltroCategoria">Categoria</label>
         <select id="asiFiltroCategoria" class="form-select form-select-sm">
             <option value="0">Todas las categorias</option>
         </select>
     </div>
     <div class="col-md-3">
-        <button type="button" class="btn btn-primary btn-sm w-100" onclick="asiCargarConsolidado()">
+        <button type="button" class="btn btn-primary btn-sm w-100 asi-toque" onclick="asiCargarConsolidado()">
             <i class="ri-search-line me-1"></i> Buscar
         </button>
     </div>

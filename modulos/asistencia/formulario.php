@@ -204,15 +204,14 @@ function asiAhoraTexto() {
 <!-- ============================================================ -->
 <!-- CONTENEDOR PRINCIPAL CON PESTAÑAS                           -->
 <!-- ============================================================ -->
-<div class="container-fluid">
+<div class="tab-content">
     <div class="row">
         <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <!-- Nav Tabs estilo Velzon -->
-                    <ul class="nav nav-tabs mb-3" id="asistenciaTabs" role="tablist">
-                        <?php if ($es_staff) { ?>
-                        <li class="nav-item" role="presentation">
+            <div class="row">
+                <!-- Nav Tabs estilo Velzon -->
+                <ul class="nav nav-tabs mb-3" id="asistenciaTabs" role="tablist">
+                    <?php if ($es_staff) { ?>
+                    <li class="nav-item" role="presentation">
                             <button class="nav-link active"
                                 id="tab-sesion-link"
                                 data-bs-toggle="tab"

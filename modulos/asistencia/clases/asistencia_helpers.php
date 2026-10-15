@@ -167,7 +167,7 @@ class AsistenciaHelpers
         if (isset($datos['lugar'])) {
             $registro['lugar'] = trim($datos['lugar']);
         } else {
-            $registro['lugar'] = 'Cancha Principal';
+            $registro['lugar'] = '';
         }
 
         // 4c. Definir el entrenador responsable
@@ -211,9 +211,9 @@ class AsistenciaHelpers
         }
     }
 
-    // 5. Iniciar la jornada de hoy (tema + categoria)
+    // 5. Iniciar la jornada de hoy (tema + categoria + lugar opcional)
     // Si ya hay una abierta para esa categoria hoy, se devuelve esa.
-    function iniciar_jornada($tema, $categoria_id, $rol_sesion, $persona_sesion)
+    function iniciar_jornada($tema, $categoria_id, $lugar, $rol_sesion, $persona_sesion)
     {
         $tema_limpio = trim($tema);
         if ($tema_limpio === '') {
@@ -223,6 +223,7 @@ class AsistenciaHelpers
         if ($cat_num <= 0) {
             return array('error' => true, 'msg' => 'Debe seleccionar la categoria de la jornada.');
         }
+        $lugar_limpio = trim($lugar);
 
         $hoy = date('Y-m-d');
 
@@ -247,7 +248,7 @@ class AsistenciaHelpers
             'fecha' => $hoy,
             'hora_inicio' => date('H:i:s'),
             'hora_fin' => date('H:i:s'),
-            'lugar' => 'Cancha Principal'
+            'lugar' => $lugar_limpio
         );
         return $this->guardar_clase($datos, 0, $rol_sesion, $persona_sesion);
     }

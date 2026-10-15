@@ -155,10 +155,15 @@ class Asistencia extends Base
         } else {
             $categoria_id = 0;
         }
+        if (isset($_POST['lugar'])) {
+            $lugar = trim($_POST['lugar']);
+        } else {
+            $lugar = '';
+        }
 
         $rol_actual = $this->obtener_rol_sesion();
         $persona_actual = $this->obtener_persona_sesion();
-        $resultado = $this->helpers->iniciar_jornada($tema, $categoria_id, $rol_actual, $persona_actual);
+        $resultado = $this->helpers->iniciar_jornada($tema, $categoria_id, $lugar, $rol_actual, $persona_actual);
         echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
     }
 

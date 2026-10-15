@@ -50,14 +50,14 @@ function asiCrearTarjetaHija(nombre, total_clases, total_asistencias, total_hora
         porcentaje = Math.round(total_asistencias * 100 / total_clases);
     }
     return `<div class="col-md-4">
-        <div class="card border mb-0">
-            <div class="card-body">
-                <h6 class="fw-bold mb-1">${asiEsc(nombre)}</h6>
-                <small class="text-muted d-block mb-2">${total_asistencias} asistencias de ${total_clases} clases</small>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge bg-primary">${porcentaje}% asistencia</span>
-                    <span class="fw-bold text-success">${total_horas} h</span>
-                </div>
+        <div class="d-flex align-items-center gap-3 border rounded px-3 py-2 h-100">
+            <div class="flex-grow-1">
+                <div class="fw-bold">${asiEsc(nombre)}</div>
+                <small class="text-muted d-block">${total_asistencias} asistencias de ${total_clases} clases</small>
+            </div>
+            <div class="text-end flex-shrink-0">
+                <span class="badge bg-primary d-block mb-1">${porcentaje}%</span>
+                <span class="fw-bold text-success small">${total_horas} h</span>
             </div>
         </div>
     </div>`;

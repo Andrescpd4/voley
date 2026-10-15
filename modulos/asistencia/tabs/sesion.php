@@ -16,148 +16,129 @@
 <!-- Libreria de escaneo (local, lee QR y barras Code128/EAN) -->
 <script src="<?php echo WEB_ROOT; ?>plantilla/assets/libs/html5-qrcode/html5-qrcode.min.js"></script>
 
-<!-- Iniciar la jornada de hoy: tema + categoria -->
-<div class="card border mb-3" style="border-style: dashed;">
-    <div class="card-body">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label text-muted small mb-1">De que trata la jornada</label>
-                <input type="text" id="asiTema" class="form-control" value="Entrenamiento" maxlength="100">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label text-muted small mb-1">Categoria</label>
-                <select id="asiCategoriaJornada" class="form-select">
-                    <option value="0">Seleccione la categoria...</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button type="button" class="btn btn-success w-100 accion-iniciar_jornada" onclick="asiIniciarJornada()">
-                    <i class="ri-play-line me-1"></i> Iniciar jornada
-                </button>
-            </div>
+<!-- Iniciar la jornada de hoy: tema + categoria (franja sin card) -->
+<div class="border-bottom pb-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1" for="asiTema">De que trata la jornada</label>
+            <input type="text" id="asiTema" class="form-control" value="Entrenamiento" maxlength="100">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small mb-1" for="asiCategoriaJornada">Categoria</label>
+            <select id="asiCategoriaJornada" class="form-select">
+                <option value="0">Seleccione la categoria...</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small mb-1" for="asiLugar">Lugar (opcional)</label>
+            <input type="text" id="asiLugar" class="form-control" placeholder="Ej: Cancha norte" maxlength="150">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-success w-100 asi-toque accion-iniciar_jornada" onclick="asiIniciarJornada()">
+                <i class="ri-play-line me-1"></i> Iniciar
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Selector de la jornada en curso -->
-<div class="row g-3 mb-3 align-items-end">
-    <div class="col-md-6">
-        <label class="form-label text-muted small mb-1">Clase o entrenamiento en curso</label>
+<!-- Toque minimo en movil sin agrandar el escritorio -->
+<style type="text/css">
+    @media (pointer: coarse) {
+        .asi-toque {
+            min-height: 44px;
+        }
+    }
+</style>
+
+<!-- Selector de la jornada en curso + finalizar -->
+<div class="row g-2 mb-3 align-items-end">
+    <div class="col-md-8">
+        <label class="form-label text-muted small mb-1" for="asiSesionClase">Clase o entrenamiento en curso</label>
         <select id="asiSesionClase" class="form-select" onchange="asiCargarSesion()">
             <option value="0">Cargando clases...</option>
         </select>
     </div>
-    <div class="col-md-3">
-        <div class="d-flex gap-2">
-            <div class="border rounded px-3 py-2 text-center flex-fill">
-                <small class="text-muted d-block">Presentes</small>
-                <span class="fw-bold fs-18 text-success" id="asiContadorPresentes">0</span>
-            </div>
-            <div class="border rounded px-3 py-2 text-center flex-fill">
-                <small class="text-muted d-block">Pendientes</small>
-                <span class="fw-bold fs-18 text-warning" id="asiContadorPendientes">0</span>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3 text-md-end">
-        <button type="button" class="btn btn-danger accion-finalizar" onclick="asiFinalizarClase()">
+    <div class="col-md-4 text-md-end">
+        <button type="button" class="btn btn-danger asi-toque accion-finalizar" onclick="asiFinalizarClase()">
             <i class="ri-flag-line me-1"></i> Finalizar entrenamiento
         </button>
     </div>
 </div>
 
-<!-- Ultimo resultado del escaneo -->
-<div id="asiUltimoResultado" class="mb-3"></div>
+<!-- Ultimo resultado del escaneo (anunciado a lectores de pantalla) -->
+<div id="asiUltimoResultado" class="mb-3" role="status"></div>
 
-<div class="row g-3">
+<div class="row g-4">
     <!-- Columna izquierda: camara y registro manual -->
-    <div class="col-lg-5">
-        <div class="card border mb-3">
-            <div class="card-header bg-light">
-                <h6 class="card-title mb-0"><i class="ri-camera-line me-1"></i> Escanear carnet o codigo</h6>
-            </div>
-            <div class="card-body">
-                <!-- Vista previa de la camara -->
-                <div id="asiLector" class="border rounded mb-3" style="min-height: 120px;"></div>
-                <div class="d-flex gap-2 mb-3">
-                    <button type="button" id="asiBtnIniciarCamara" class="btn btn-primary btn-sm accion-marcar" onclick="asiIniciarCamara()">
-                        <i class="ri-play-line me-1"></i> Iniciar camara
-                    </button>
-                    <button type="button" id="asiBtnDetenerCamara" class="btn btn-light btn-sm d-none" onclick="asiDetenerCamara()">
-                        <i class="ri-stop-line me-1"></i> Detener
-                    </button>
-                </div>
-                <small class="text-muted d-block">La camara necesita permiso del navegador y conexion segura (HTTPS). Si no abre, use el registro manual.</small>
-            </div>
+    <div class="col-lg-4">
+        <h6 class="fw-semibold mb-2"><i class="ri-camera-line me-1 text-muted"></i> Escanear carnet o codigo</h6>
+        <!-- Vista previa de la camara -->
+        <div id="asiLector" class="border rounded mb-2" style="min-height: 120px;"></div>
+        <div class="d-flex gap-2 mb-2">
+            <button type="button" id="asiBtnIniciarCamara" class="btn btn-primary btn-sm asi-toque accion-marcar" onclick="asiIniciarCamara()">
+                <i class="ri-play-line me-1"></i> Iniciar camara
+            </button>
+            <button type="button" id="asiBtnDetenerCamara" class="btn btn-light btn-sm asi-toque d-none" onclick="asiDetenerCamara()">
+                <i class="ri-stop-line me-1"></i> Detener
+            </button>
         </div>
+        <small class="text-muted d-block mb-4">La camara necesita permiso del navegador y conexion segura (HTTPS). Si no abre, use el registro manual.</small>
 
-        <div class="card border">
-            <div class="card-header bg-light">
-                <h6 class="card-title mb-0"><i class="ri-keyboard-line me-1"></i> Registro manual por cedula</h6>
-            </div>
-            <div class="card-body">
-                <label class="form-label text-muted small">Numero de documento de la deportista</label>
-                <div class="input-group">
-                    <input type="text" id="asiDocumentoManual" class="form-control" placeholder="Ej: 1023456789" autocomplete="off">
-                    <button type="button" class="btn btn-success accion-marcar" onclick="asiRegistrarManual()">
-                        <i class="ri-check-line me-1"></i> Registrar
-                    </button>
-                </div>
-                <small class="text-muted d-block mt-2">Sirve cuando la deportista no trae el carnet. Marca entrada o salida igual que el escaneo.</small>
-            </div>
+        <h6 class="fw-semibold mb-2"><i class="ri-keyboard-line me-1 text-muted"></i> Registro manual por cedula</h6>
+        <label class="form-label text-muted small" for="asiDocumentoManual">Numero de documento de la deportista</label>
+        <div class="input-group">
+            <input type="text" id="asiDocumentoManual" class="form-control" placeholder="Ej: 1023456789" autocomplete="off">
+            <button type="button" class="btn btn-success asi-toque accion-marcar" onclick="asiRegistrarManual()">
+                <i class="ri-check-line me-1"></i> Registrar
+            </button>
         </div>
+        <small class="text-muted d-block mt-2">Sirve cuando la deportista no trae el carnet. Marca entrada o salida igual que el escaneo.</small>
     </div>
 
     <!-- Columna derecha: presentes y pendientes -->
-    <div class="col-lg-7">
-        <div class="card border mb-3">
-            <div class="card-header bg-light">
-                <h6 class="card-title mb-0"><i class="ri-team-line me-1"></i> Presentes en la sesion</h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">Deportista</th>
-                                <th scope="col">Estado</th>
-                                <th scope="col">Entrada</th>
-                                <th scope="col">Salida</th>
-                                <th scope="col">Tiempo</th>
-                            </tr>
-                        </thead>
-                        <tbody id="asiTablaPresentes">
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Seleccione una clase para ver la sesion</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <h6 class="fw-semibold mb-0"><i class="ri-team-line me-1 text-muted"></i> Presentes en la sesion</h6>
+            <span class="badge bg-success-subtle text-success fs-13" id="asiContadorPresentes">0</span>
+        </div>
+        <div class="table-responsive mb-4">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Deportista</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Entrada</th>
+                        <th scope="col">Salida</th>
+                        <th scope="col">Tiempo</th>
+                    </tr>
+                </thead>
+                <tbody id="asiTablaPresentes">
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">Seleccione una clase para ver la sesion</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <div class="card border">
-            <div class="card-header bg-light">
-                <h6 class="card-title mb-0"><i class="ri-user-unfollow-line me-1"></i> Pendientes por llegar</h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">Deportista</th>
-                                <th scope="col">Documento</th>
-                                <th scope="col" class="text-end">Excusa</th>
-                            </tr>
-                        </thead>
-                        <tbody id="asiTablaPendientes">
-                            <tr>
-                                <td colspan="3" class="text-center py-4 text-muted">Sin pendientes</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <h6 class="fw-semibold mb-0"><i class="ri-user-unfollow-line me-1 text-muted"></i> Pendientes por llegar</h6>
+            <span class="badge bg-warning-subtle text-warning fs-13" id="asiContadorPendientes">0</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Deportista</th>
+                        <th scope="col">Documento</th>
+                        <th scope="col" class="text-end">Excusa</th>
+                    </tr>
+                </thead>
+                <tbody id="asiTablaPendientes">
+                    <tr>
+                        <td colspan="3" class="text-center py-4 text-muted">Sin pendientes</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -214,7 +195,7 @@ function asiCrearFilaPendiente(item) {
         <td><span class="fw-medium">${nombre}</span></td>
         <td><code>${documento}</code></td>
         <td class="text-end">
-            <button type="button" class="btn btn-soft-info btn-sm accion-marcar_excusa" onclick="asiPedirExcusa(${id_deportista}, '${documento}')">
+            <button type="button" class="btn btn-soft-info btn-sm asi-toque accion-marcar_excusa" onclick="asiPedirExcusa(${id_deportista}, '${documento}')">
                 <i class="ri-mail-line me-1"></i> Excusa
             </button>
         </td>
@@ -357,11 +338,12 @@ function asiCargarCategoriasJornada() {
     });
 }
 
-// 7c. Iniciar la jornada de hoy con tema y categoria
+// 7c. Iniciar la jornada de hoy con tema, categoria y lugar
 function asiIniciarJornada() {
     var tema = document.getElementById('asiTema').value;
     var categoria = document.getElementById('asiCategoriaJornada').value;
-    asiAjax('iniciar_jornada', { tema: tema, categoria_id: categoria }, function(respuesta) {
+    var lugar = document.getElementById('asiLugar').value;
+    asiAjax('iniciar_jornada', { tema: tema, categoria_id: categoria, lugar: lugar }, function(respuesta) {
         if (!respuesta.error) {
             asiMostrarMsg(respuesta.msg, 'success');
             asiCargarClasesSesion();
@@ -513,7 +495,7 @@ function asiPedirExcusa(deportista_id, documento) {
         showCancelButton: true,
         confirmButtonText: 'Guardar excusa',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#0ab39c'
+        confirmButtonColor: 'var(--vz-success)'
     }).then(function(resultado) {
         if (resultado.isConfirmed) {
             var motivo = '';
@@ -546,7 +528,7 @@ function asiFinalizarClase() {
         showCancelButton: true,
         confirmButtonText: 'Si, finalizar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#f06548'
+        confirmButtonColor: 'var(--vz-danger)'
     }).then(function(resultado) {
         if (resultado.isConfirmed) {
             asiDetenerCamara();
