@@ -221,6 +221,41 @@ function registrar_log_push($texto)
     file_put_contents($archivo, date('Y-m-d H:i:s') . ' ' . $texto . PHP_EOL, FILE_APPEND);
 }
 
+// Asegurar la ruta de openssl.cnf en XAMPP (solo si el servidor no la trae).
+// Sin esto, la firma VAPID falla con "Unable to create the local key".
+// En el hosting Linux no cambia nada porque OpenSSL ya viene configurado.
+function asegurar_conf_openssl()
+{
+    // 1. Si la variable trae una ruta que si existe, no se toca nada
+    $conf_abierta = getenv('OPENSSL_CONF');
+    if ($conf_abierta === false) {
+        $conf_abierta = '';
+    }
+    if ($conf_abierta !== '') {
+        if (file_exists($conf_abierta)) {
+            return;
+        }
+        // Ojo: Apache (httpd-xampp.conf) la deja apuntando a
+        // C:/xampp/apache/bin/openssl.cnf, que no existe. Se sigue abajo
+        // para corregirla con la ruta real del equipo.
+    }
+
+    // 2. Buscar el openssl.cnf local de XAMPP (primero Apache, luego PHP)
+    $ruta_conf_apache = 'C:\xampp\apache\conf\openssl.cnf';
+    $ruta_conf_php = 'C:\xampp\php\extras\openssl\openssl.cnf';
+    if (file_exists($ruta_conf_apache)) {
+        putenv('OPENSSL_CONF=' . $ruta_conf_apache);
+        $_SERVER['OPENSSL_CONF'] = $ruta_conf_apache;
+        $_ENV['OPENSSL_CONF'] = $ruta_conf_apache;
+    } else {
+        if (file_exists($ruta_conf_php)) {
+            putenv('OPENSSL_CONF=' . $ruta_conf_php);
+            $_SERVER['OPENSSL_CONF'] = $ruta_conf_php;
+            $_ENV['OPENSSL_CONF'] = $ruta_conf_php;
+        }
+    }
+}
+
 // Enviar push del navegador a una persona (todas sus suscripciones).
 // Nunca lanza excepcion: devuelve arreglo de resultados (vacio si no se pudo).
 function enviar_push_navegador($persona_id, $titulo, $mensaje, $url)
@@ -268,6 +303,10 @@ function enviar_push_navegador($persona_id, $titulo, $mensaje, $url)
     if (count($suscripciones) === 0) {
         return array();
     }
+
+    // 4b. En XAMPP el Apache no trae OPENSSL_CONF y la firma VAPID falla.
+    // Se asegura la ruta antes de firmar (en hosting no cambia nada).
+    asegurar_conf_openssl();
 
     // 5. Enviar a cada suscripcion y recoger resultados
     try {
