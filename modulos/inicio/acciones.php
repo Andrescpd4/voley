@@ -6,7 +6,7 @@
 // Reglas AGENTS.md:
 //   - Cero HTML en el backend
 //   - if/else en lugar de ?? y ternarios
-//   - Comprobacion segura de select_one() con is_string()
+//   - Conteos de select_one() con _a_numero() (COUNT trae int, no string)
 //   - Consultas sanitizadas
 // ============================================================
 
@@ -143,28 +143,16 @@ class Formulario extends clase_base
     function dashboard()
     {
         // 1. Total deportistas activos
-        $total_deportistas = $this->db->select_one("SELECT COUNT(*) FROM deportista WHERE estado != 'inactivo'");
-        if (!is_string($total_deportistas)) {
-            $total_deportistas = 0;
-        }
+        $total_deportistas = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM deportista WHERE estado != 'inactivo'"));
 
         // 2. Nuevas solicitudes pendientes
-        $nuevas_solicitudes = $this->db->select_one("SELECT COUNT(*) FROM deportista WHERE estado = 'pendiente_revision'");
-        if (!is_string($nuevas_solicitudes)) {
-            $nuevas_solicitudes = 0;
-        }
+        $nuevas_solicitudes = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM deportista WHERE estado = 'pendiente_revision'"));
 
         // 3. Documentos pendientes de revision
-        $documentacion_pendiente = $this->db->select_one("SELECT COUNT(*) FROM documento WHERE estado = 'pendiente'");
-        if (!is_string($documentacion_pendiente)) {
-            $documentacion_pendiente = 0;
-        }
+        $documentacion_pendiente = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM documento WHERE estado = 'pendiente'"));
 
         // 4. Proximos eventos
-        $proximos_total = $this->db->select_one("SELECT COUNT(*) FROM evento WHERE fecha >= CURDATE()");
-        if (!is_string($proximos_total)) {
-            $proximos_total = 0;
-        }
+        $proximos_total = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM evento WHERE fecha >= CURDATE()"));
 
         $proximos_eventos = $this->db->select_all("SELECT nombre, fecha, lugar FROM evento WHERE fecha >= CURDATE() ORDER BY fecha ASC LIMIT 3");
         if (!is_array($proximos_eventos)) {
@@ -277,7 +265,7 @@ class Formulario extends clase_base
         // Los administradores ven todas las publicaciones
         if ($rol === 1 || $rol === 4) {
             $existe = $this->db->select_one("SELECT COUNT(*) FROM comunicado WHERE id = '$comunicado_id'");
-            if (is_string($existe) && intval($existe) > 0) {
+            if ($this->_a_numero($existe) > 0) {
                 return true;
             }
             return false;
@@ -431,25 +419,19 @@ class Formulario extends clase_base
             $pub = $filas[$i];
             $pub_id = intval($pub['id']);
 
-            $total_likes = $this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$pub_id'");
-            if (!is_string($total_likes)) {
-                $total_likes = 0;
-            }
+            $total_likes = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$pub_id'"));
 
-            $mi_like = $this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$pub_id' AND persona_id = '$persona_id'");
-            if (is_string($mi_like) && intval($mi_like) > 0) {
+            $mi_like = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$pub_id' AND persona_id = '$persona_id'"));
+            if ($mi_like > 0) {
                 $me_gusta = true;
             } else {
                 $me_gusta = false;
             }
 
-            $total_comentarios = $this->db->select_one("SELECT COUNT(*) FROM comunicado_comentario WHERE comunicado_id = '$pub_id' AND visible = 1");
-            if (!is_string($total_comentarios)) {
-                $total_comentarios = 0;
-            }
+            $total_comentarios = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_comentario WHERE comunicado_id = '$pub_id' AND visible = 1"));
 
-            $leido = $this->db->select_one("SELECT COUNT(*) FROM comunicado_lectura WHERE comunicado_id = '$pub_id' AND persona_id = '$persona_id'");
-            if (is_string($leido) && intval($leido) > 0) {
+            $leido = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_lectura WHERE comunicado_id = '$pub_id' AND persona_id = '$persona_id'"));
+            if ($leido > 0) {
                 $leido_por_mi = true;
             } else {
                 $leido_por_mi = false;
@@ -499,8 +481,8 @@ class Formulario extends clase_base
         }
 
         // 1. Si ya existe el like se quita, si no se crea
-        $existe = $this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$comunicado_id' AND persona_id = '$persona_id'");
-        if (is_string($existe) && intval($existe) > 0) {
+        $existe = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$comunicado_id' AND persona_id = '$persona_id'"));
+        if ($existe > 0) {
             $this->db->query("DELETE FROM comunicado_like WHERE comunicado_id = '$comunicado_id' AND persona_id = '$persona_id'");
             $me_gusta = false;
         } else {
@@ -509,10 +491,7 @@ class Formulario extends clase_base
         }
 
         // 2. Contar likes actualizados
-        $total = $this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$comunicado_id'");
-        if (!is_string($total)) {
-            $total = 0;
-        }
+        $total = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_like WHERE comunicado_id = '$comunicado_id'"));
 
         echo json_encode(array('error' => false, 'msg' => 'ok', 'data' => array('total_likes' => intval($total), 'me_gusta' => $me_gusta)));
     }
@@ -561,10 +540,7 @@ class Formulario extends clase_base
             return;
         }
 
-        $total = $this->db->select_one("SELECT COUNT(*) FROM comunicado_comentario WHERE comunicado_id = '$comunicado_id' AND visible = 1");
-        if (!is_string($total)) {
-            $total = 0;
-        }
+        $total = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado_comentario WHERE comunicado_id = '$comunicado_id' AND visible = 1"));
 
         $autor = $this->_nombre_autor($persona_id);
         echo json_encode(array('error' => false, 'msg' => 'Comentario publicado', 'data' => array('id' => $nuevo_id, 'autor' => $autor, 'total_comentarios' => intval($total))));
@@ -596,8 +572,8 @@ class Formulario extends clase_base
         }
 
         // 1. Solo aplica si la publicacion exige confirmacion
-        $pide = $this->db->select_one("SELECT confirmacion_lectura FROM comunicado WHERE id = '$comunicado_id'");
-        if (!is_string($pide) || intval($pide) !== 1) {
+        $pide = $this->_a_numero($this->db->select_one("SELECT confirmacion_lectura FROM comunicado WHERE id = '$comunicado_id'"));
+        if ($pide !== 1) {
             $this->_error_muro('Esta publicacion no requiere confirmacion');
             return;
         }
@@ -665,14 +641,14 @@ class Formulario extends clase_base
             $tipo = 'todos';
         }
         if ($tipo === 'categoria' && $dest_id > 0) {
-            $existe_cat = $this->db->select_one("SELECT COUNT(*) FROM categoria WHERE id = '$dest_id'");
-            if (!is_string($existe_cat) || intval($existe_cat) <= 0) {
+            $existe_cat = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM categoria WHERE id = '$dest_id'"));
+            if ($existe_cat <= 0) {
                 $this->_error_muro('La categoria elegida no existe');
                 return;
             }
         } elseif ($tipo === 'individual' && $dest_id > 0) {
-            $existe_per = $this->db->select_one("SELECT COUNT(*) FROM persona WHERE id = '$dest_id'");
-            if (!is_string($existe_per) || intval($existe_per) <= 0) {
+            $existe_per = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM persona WHERE id = '$dest_id'"));
+            if ($existe_per <= 0) {
                 $this->_error_muro('La persona elegida no existe');
                 return;
             }
@@ -1286,8 +1262,8 @@ class Formulario extends clase_base
             return;
         }
 
-        $existe = $this->db->select_one("SELECT COUNT(*) FROM comunicado WHERE id = '$comunicado_id'");
-        if (!is_string($existe) || intval($existe) <= 0) {
+        $existe = $this->_a_numero($this->db->select_one("SELECT COUNT(*) FROM comunicado WHERE id = '$comunicado_id'"));
+        if ($existe <= 0) {
             $this->_error_muro('La publicacion no existe');
             return;
         }
