@@ -30,6 +30,180 @@
     <!-- custom Css-->
     <link href="<?php echo WEB_ROOT ?>plantilla/assets/css/custom.min.css" rel="stylesheet" type="text/css" />
 
+    <!-- Identidad del login: panel purpura + formulario (solo esta pagina) -->
+    <style type="text/css">
+        /* Telon del club detras del formulario */
+        .login-fondo {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background-color: #1a0b25;
+            background-image:
+                radial-gradient(600px 400px at 12% 8%, rgba(45, 20, 61, 0.9), transparent 70%),
+                radial-gradient(520px 380px at 88% 92%, rgba(214, 51, 132, 0.18), transparent 70%),
+                repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 14px);
+            padding: 32px 0;
+        }
+        /* Marca de agua de cancha al fondo */
+        .login-marca-agua {
+            position: absolute;
+            right: -40px;
+            bottom: -30px;
+            width: 420px;
+            height: auto;
+            opacity: 0.06;
+            pointer-events: none;
+        }
+        .login-fondo .auth-page-content {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+        /* Pie legible sobre el fondo oscuro solo aqui */
+        .login-fondo .login-pie {
+            color: #cfc2de;
+        }
+        /* Contenedor de dos columnas: club + acceso, centrado moderno */
+        .login-shell {
+            display: flex;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+            margin: 0 auto;
+            max-width: 960px;
+            width: 100%;
+        }
+        /* Panel del club en purpura profundo */
+        .login-panel {
+            position: relative;
+            flex: 0 0 42%;
+            background: #2d143d;
+            color: #ffffff;
+            padding: 40px 32px;
+            overflow: hidden;
+        }
+        /* Lineas de cancha decorativas en rosa */
+        .login-cancha {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .login-panel-contenido {
+            position: relative;
+            z-index: 1;
+        }
+        /* Marca del club con el mas en rosa */
+        .login-marca {
+            font-size: 44px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 0.5px;
+            margin: 16px 0 4px;
+            text-wrap: balance;
+        }
+        .login-mas {
+            color: #d63384;
+        }
+        /* Tesis del club en una linea */
+        .login-tesis {
+            color: #e6dcf0;
+            font-size: 17px;
+            margin-bottom: 20px;
+        }
+        /* Puntos de confianza del club */
+        .login-puntos {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 10px;
+            color: #cfc2de;
+            font-size: 14px;
+        }
+        .login-puntos i {
+            color: #d63384;
+            margin-right: 8px;
+        }
+        /* Columna del formulario */
+        .login-formulario {
+            flex: 1;
+            padding: 40px 36px;
+        }
+        /* Campos modernos: mas altos y con foco rosa solo aqui */
+        .login-shell .form-control {
+            min-height: 48px;
+            border-radius: 12px;
+        }
+        .login-shell .form-control:focus {
+            border-color: #d63384;
+            box-shadow: 0 0 0 3px rgba(214, 51, 132, 0.18);
+        }
+        /* Boton de ingreso con presencia moderna solo aqui */
+        .login-shell .btn-primary {
+            min-height: 48px;
+            border-radius: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            background: #2d143d;
+            border-color: #2d143d;
+        }
+        .login-shell .btn-primary:hover {
+            background: #1a0b25;
+            border-color: #1a0b25;
+        }
+        /* Titular y enlaces en la voz del club solo aqui */
+        .login-shell .text-primary {
+            color: #2d143d !important;
+        }
+        .login-shell a {
+            color: #d63384;
+        }
+        .login-shell :focus-visible {
+            outline: 2px solid #d63384;
+            outline-offset: 2px;
+        }
+        /* Movil: panel compacto arriba, formulario debajo */
+        @media (max-width: 991.98px) {
+            .login-fondo {
+                padding: 20px 0;
+                align-items: flex-start;
+            }
+            .login-marca-agua {
+                width: 280px;
+                right: -60px;
+                bottom: auto;
+                top: -20px;
+            }
+            .login-shell {
+                flex-direction: column;
+            }
+            .login-panel {
+                flex: none;
+                padding: 28px 24px;
+            }
+            .login-marca {
+                font-size: 32px;
+            }
+            .login-puntos {
+                display: none;
+            }
+            .login-formulario {
+                padding: 28px 22px;
+            }
+        }
+        /* Sin movimiento para quien lo prefiere */
+        @media (prefers-reduced-motion: reduce) {
+            .login-shell * {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+    </style>
+
     <!-- SweetAlert2 -->
     <link rel="stylesheet" type="text/css" href="<?php echo WEB_ROOT ?>plantilla/assets/css/sweetalert2.css">
     <script src="<?php echo WEB_ROOT ?>plantilla/assets/js/sweet-alert/sweetalert.min.js"></script>
@@ -41,35 +215,37 @@
 </head>
 
 <body>
-    <div class="auth-page-wrapper pt-5">
-        <div class="auth-one-bg-position auth-one-bg" id="auth-particles">
-            <div class="bg-overlay"></div>
-            <div class="shape">
-                <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1440 120">
-                    <path d="M 0,36 C 144,53.6 432,123.2 720,124 C 1008,124.8 1296,56.8 1440,40L1440 140L0 140z"></path>
-                </svg>
-            </div>
-        </div>
-
+    <div class="auth-page-wrapper login-fondo">
+        <!-- Marca de agua de cancha al fondo -->
         <div class="auth-page-content">
             <div class="container">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="text-center mt-sm-5 mb-4 text-white-50">
-                            <div>
-                                <a href="<?php echo WEB_ROOT ?>" class="d-inline-block auth-logo">
-                                    <img src="<?php echo WEB_ROOT ?>img/logo-icon.png" alt="Logo" height="80">
-                                </a>
-                            </div>
-                            <p class="mt-3 fs-16 fw-medium text-white">Voley+ Escuela Deportiva</p>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="row justify-content-center">
-                    <div class="col-md-8 col-lg-6 col-xl-5">
-                        <div class="card mt-2 card-bg-fill">
-                            <div class="card-body p-4">
+                    <div class="col-12 col-xl-10">
+                        <div class="login-shell">
+                            <!-- Panel del club con lineas de cancha -->
+                            <div class="login-panel">
+                                <svg class="login-cancha" viewBox="0 0 200 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                                    <g fill="none" stroke="#d63384" stroke-width="2" opacity="0.35">
+                                        <rect x="14" y="14" width="172" height="292" rx="4" />
+                                        <line x1="14" y1="160" x2="186" y2="160" />
+                                        <line x1="14" y1="100" x2="186" y2="100" stroke-dasharray="8 6" />
+                                        <line x1="14" y1="220" x2="186" y2="220" stroke-dasharray="8 6" />
+                                        <circle cx="100" cy="160" r="26" />
+                                    </g>
+                                </svg>
+                                <div class="login-panel-contenido">
+                                    <img src="<?php echo WEB_ROOT ?>img/logo-icon.png" alt="Logo Voley+" height="72">
+                                    <div class="login-marca">Voley<span class="login-mas">+</span></div>
+                                    <p class="login-tesis">Club deportivo todo en un solo lugar.</p>
+                                    <ul class="login-puntos">
+                                        <li><i class="ri-check-line" aria-hidden="true"></i>Afiliaciones y documentos</li>
+                                        <li><i class="ri-check-line" aria-hidden="true"></i>Asistencia y eventos</li>
+                                        <li><i class="ri-check-line" aria-hidden="true"></i>Avisos del club</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- Formulario de acceso -->
+                            <div class="login-formulario">
                                 <div class="text-center mt-2">
                                     <h5 class="text-primary">¡Bienvenido!</h5>
                                     <p class="text-muted">Ingresa tus credenciales para acceder al sistema</p>
@@ -101,13 +277,12 @@
                                             </button>
                                         </div>
                                     </form>
+                                    <div class="mt-3 text-center">
+                                        <p class="mb-0 login-pie">¿Problemas para acceder? Contacta a la administración.</p>
+                                        <a href="<?php echo WEB_ROOT ?>politica-privacidad" class="text-decoration-none" target="_blank">Política de Privacidad</a>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="mt-3 text-center">
-                            <p class="mb-0 text-muted">¿Problemas para acceder? Contacta a la administración.</p>
-                            <a href="<?php echo WEB_ROOT ?>politica-privacidad" class="text-decoration-none text-primary" target="_blank">Política de Privacidad</a>
                         </div>
                     </div>
                 </div>
@@ -279,8 +454,8 @@
                 showCancelButton: true,
                 confirmButtonText: '<i class="ri-check-line me-1"></i> Acepto los documentos',
                 cancelButtonText: '<i class="ri-close-line me-1"></i> Rechazar y salir',
-                confirmButtonColor: '#405189',
-                cancelButtonColor: '#405189',
+                confirmButtonColor: '#2d143d',
+                cancelButtonColor: '#2d143d',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 focusConfirm: true
