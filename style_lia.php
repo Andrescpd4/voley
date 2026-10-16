@@ -40,4 +40,30 @@
     .table-bordered>:not(caption)>*>*{
        border-width : inherit !important;
     }
+
+    /* Tabs en caja con wrap: misma piel en PC y movil, sin solapes ni scroll */
+    ul.nav-tabs[role="tablist"]{
+        flex-wrap: wrap;
+        gap: 8px;
+        border-bottom: none;
+    }
+    ul.nav-tabs[role="tablist"] .nav-link{
+        border: 1px solid var(--vz-border-color, #e9ebec);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 0;
+        min-height: 44px;
+        color: var(--vz-body-color, #212529);
+        white-space: nowrap;
+    }
+    ul.nav-tabs[role="tablist"] .nav-link:hover{
+        border-color: var(--vz-primary);
+        color: var(--vz-primary);
+        isolation: auto;
+    }
+    ul.nav-tabs[role="tablist"] .nav-link.active{
+        background: var(--vz-primary);
+        border-color: var(--vz-primary);
+        color: #ffffff;
+    }
   </style>    
