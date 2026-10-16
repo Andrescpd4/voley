@@ -154,7 +154,7 @@ if (strpos($foto_actual, 'http') !== 0 && strpos($foto_actual, '/') !== 0) {
 <!-- ============================================================ -->
 <!-- CONTENEDOR PRINCIPAL DEL PERFIL                              -->
 <!-- ============================================================ -->
-<div class="container-fluid">
+<div class="tab-content">
 
     <!-- Tarjeta de Portada y Encabezado -->
     <div class="card shadow-sm border-0 mb-4">

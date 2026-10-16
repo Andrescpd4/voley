@@ -41,6 +41,17 @@
        border-width : inherit !important;
     }
 
+    /* Contencion movil: ningun contenido empuja el viewport ni saca el topbar */
+    html, body {
+        overflow-x: clip;
+    }
+    img, canvas, svg, table {
+        max-width: 100%;
+    }
+    .card-body, .card-text, .alert {
+        overflow-wrap: anywhere;
+    }
+
     /* Tabs en caja con wrap: misma piel en PC y movil, sin solapes ni scroll */
     ul.nav-tabs[role="tablist"]{
         flex-wrap: wrap;

@@ -27,6 +27,19 @@ if (isset($_SESSION['nombre_usuario']) && trim($_SESSION['nombre_usuario']) !== 
     $saludo_usuario = 'Bienvenido';
 }
 
+// 1b. Saludo segun la hora del dia + fecha de hoy en español
+$hora_actual = intval(date('H'));
+if ($hora_actual >= 5 && $hora_actual < 12) {
+    $momento_dia = 'Buenos días';
+} else if ($hora_actual >= 12 && $hora_actual < 19) {
+    $momento_dia = 'Buenas tardes';
+} else {
+    $momento_dia = 'Buenas noches';
+}
+$dias_semana = array('domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado');
+$meses_anio = array('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre');
+$fecha_hoy = $dias_semana[intval(date('w'))] . ', ' . intval(date('d')) . ' de ' . $meses_anio[intval(date('n')) - 1];
+
 // 2. Textos y enlaces del hero segun rol
 if ($es_acudiente) {
     $texto_cta_principal = 'Registrar deportista';
@@ -59,6 +72,58 @@ if ($es_acudiente) {
         text-wrap: balance;
     }
 
+    /* Hero deportivo del club: panel purpura con cancha */
+    .inicio-hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px;
+        background: #2d143d;
+        color: #ffffff;
+        padding: 32px;
+        animation: inicioHeroEntrada 0.6s ease both;
+    }
+    /* Lineas de cancha decorativas al fondo del hero */
+    .inicio-hero-cancha {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: auto;
+        pointer-events: none;
+    }
+    .inicio-hero-contenido {
+        position: relative;
+        z-index: 1;
+    }
+    /* Marca de agua del club al fondo del hero */
+    .inicio-hero-marca {
+        position: absolute;
+        top: 50%;
+        right: 24px;
+        transform: translateY(-50%);
+        height: 220px;
+        width: auto;
+        opacity: 0.14;
+        pointer-events: none;
+    }
+    .inicio-hero-titulo {
+        color: #ffffff;
+    }
+    .inicio-hero-sub {
+        color: #cfc2de;
+    }
+    /* Entrada del hero al cargar la pagina */
+    @keyframes inicioHeroEntrada {
+        from {
+            opacity: 0;
+            transform: translateY(14px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     /* Ritmo vertical entre bloques */
     .inicio-bloque {
         margin-bottom: 24px;
@@ -83,7 +148,7 @@ if ($es_acudiente) {
     .inicio-bloque input:focus-visible,
     .inicio-bloque textarea:focus-visible,
     .inicio-bloque select:focus-visible {
-        outline: 2px solid #405189;
+        outline: 2px solid #d63384;
         outline-offset: 2px;
     }
 
@@ -92,7 +157,7 @@ if ($es_acudiente) {
         width: 44px;
         height: 44px;
         border-radius: 50%;
-        background: #405189;
+        background: #2d143d;
         color: #ffffff;
         display: flex;
         align-items: center;
@@ -104,9 +169,31 @@ if ($es_acudiente) {
 
     /* Boton Me gusta activo */
     .muro-like-activo {
-        background: #405189;
-        border-color: #405189;
+        background: #d63384;
+        border-color: #d63384;
         color: #ffffff;
+    }
+
+    /* Hero compacto en movil */
+    @media (max-width: 575.98px) {
+        .inicio-hero {
+            padding: 24px 20px;
+        }
+        .inicio-hero-cancha {
+            opacity: 0.5;
+        }
+        .inicio-hero-marca {
+            height: 140px;
+            right: 12px;
+            opacity: 0.1;
+        }
+    }
+
+    /* Sin movimiento para quien lo prefiere */
+    @media (prefers-reduced-motion: reduce) {
+        .inicio-hero {
+            animation: none !important;
+        }
     }
 </style>
 
@@ -115,26 +202,23 @@ if ($es_acudiente) {
 <!-- ============================================================ -->
 <div class="row inicio-bloque">
     <div class="col-12">
-        <div class="card">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <span class="badge p-3" style="background: #405189;">
-                        <i aria-hidden="true" class="ri-team-line fs-4 text-white"></i>
-                    </span>
-                    <div class="flex-grow-1" style="min-width: 220px;">
-                        <h2 class="inicio-hero-titulo card-title mb-1 fs-4">Hola, <?php echo htmlspecialchars($saludo_usuario); ?></h2>
-                        <p class="text-muted mb-0"><?php echo htmlspecialchars($descripcion_hero); ?></p>
-                    </div>
-                    <div class="d-grid gap-2 d-sm-flex">
-                        <a href="<?php echo $enlace_cta_principal; ?>" class="btn btn-primary">
-                            <?php echo htmlspecialchars($texto_cta_principal); ?> <i aria-hidden="true" class="ri-arrow-right-line ms-1"></i>
+        <div class="inicio-hero">
+            <img class="inicio-hero-marca" src="<?php echo WEB_ROOT ?>img/logo.png" alt="" aria-hidden="true">
+            <div class="inicio-hero-contenido d-flex align-items-center gap-3 flex-wrap">
+                <div class="flex-grow-1" style="min-width: 0; flex-basis: 260px;">
+                    <h2 class="inicio-hero-titulo card-title mb-1 fs-4"><?php echo htmlspecialchars($momento_dia); ?>, <?php echo htmlspecialchars($saludo_usuario); ?></h2>
+                    <p class="inicio-hero-sub small mb-1"><?php echo htmlspecialchars($fecha_hoy); ?></p>
+                    <p class="inicio-hero-sub mb-0"><?php echo htmlspecialchars($descripcion_hero); ?></p>
+                </div>
+                <div class="d-grid gap-2 d-sm-flex">
+                    <a href="<?php echo $enlace_cta_principal; ?>" class="btn btn-primary">
+                        <?php echo htmlspecialchars($texto_cta_principal); ?> <i aria-hidden="true" class="ri-arrow-right-line ms-1"></i>
+                    </a>
+                    <?php if ($texto_cta_secundario !== '') : ?>
+                        <a href="<?php echo $enlace_cta_secundario; ?>" class="btn btn-outline-light">
+                            <?php echo htmlspecialchars($texto_cta_secundario); ?>
                         </a>
-                        <?php if ($texto_cta_secundario !== '') : ?>
-                            <a href="<?php echo $enlace_cta_secundario; ?>" class="btn btn-outline-primary">
-                                <?php echo htmlspecialchars($texto_cta_secundario); ?>
-                            </a>
-                        <?php endif; ?>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

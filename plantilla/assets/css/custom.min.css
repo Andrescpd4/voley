@@ -1,15 +1,15 @@
 /* ============================================================
-   VOLEY+ — Tema rosa/magenta femenino
-   Sidebar oscuro con acentos rosa + contenido CLARO
-   Paleta basada en logo: fbadd9, d50156, 011121, fcfcfc
+   VOLEY+ — Tema del club
+   Sidebar purpura profundo con acentos rosa + contenido CLARO
+   Paleta PRODUCT.md: 2d143d, d63384, 0ab39c, f7b84b, f06548
    ============================================================ */
 
 /* ---- Color primario global (botones, links, acentos) ---- */
 [data-theme="default"][data-theme-colors="voley"] {
-  --vz-primary: #c2458b;
-  --vz-primary-rgb: 194, 69, 139;
-  --vz-primary-bg-subtle: rgba(194, 69, 139, 0.10);
-  --vz-primary-border-subtle: rgba(194, 69, 139, 0.25);
+  --vz-primary: #d63384;
+  --vz-primary-rgb: 214, 51, 132;
+  --vz-primary-bg-subtle: rgba(214, 51, 132, 0.10);
+  --vz-primary-border-subtle: rgba(214, 51, 132, 0.25);
   --vz-primary-text-emphasis: #8f2f66;
 }
 
@@ -22,7 +22,7 @@
 
 /* ---- Sidebar OSCURO con acentos rosa ---- */
 [data-theme="default"][data-sidebar="dark"] {
-  --vz-vertical-menu-bg: #1e1328;
+  --vz-vertical-menu-bg: #2d143d;
   --vz-vertical-menu-item-color: #c9b8d6;
   --vz-vertical-menu-item-hover-color: #f062a6;
   --vz-vertical-menu-item-active-color: #fbadd9;
@@ -42,12 +42,12 @@
 
 /* ---- Hover de items del menu lateral ---- */
 .navbar-menu .navbar-nav .nav-link:hover {
-  background-color: rgba(194, 69, 139, 0.08) !important;
+  background-color: rgba(214, 51, 132, 0.08) !important;
 }
 
 /* ---- Item activo del menu lateral ---- */
 .navbar-menu .navbar-nav .nav-link.active {
-  background-color: rgba(194, 69, 139, 0.12) !important;
+  background-color: rgba(214, 51, 132, 0.12) !important;
 }
 
 /* ---- Submenu items ---- */
@@ -65,32 +65,32 @@
 /* ---- Cards ---- */
 .card {
   background-color: #ffffff !important;
-  border-color: rgba(194, 69, 139, 0.12) !important;
+  border-color: rgba(214, 51, 132, 0.12) !important;
 }
 .card-header {
-  background-color: rgba(194, 69, 139, 0.04) !important;
-  border-bottom-color: rgba(194, 69, 139, 0.10) !important;
+  background-color: rgba(214, 51, 132, 0.04) !important;
+  border-bottom-color: rgba(214, 51, 132, 0.10) !important;
 }
 
 /* ---- Tablas ---- */
 .table {
   --vz-table-color: #3d3448;
   --vz-table-bg: transparent;
-  --vz-table-hover-bg: rgba(194, 69, 139, 0.04);
-  --vz-table-border-color: rgba(194, 69, 139, 0.10);
+  --vz-table-hover-bg: rgba(214, 51, 132, 0.04);
+  --vz-table-border-color: rgba(214, 51, 132, 0.10);
 }
 
 /* ---- Inputs y formularios ---- */
 .form-control,
 .form-select {
   background-color: #ffffff !important;
-  border-color: rgba(194, 69, 139, 0.20) !important;
+  border-color: rgba(214, 51, 132, 0.20) !important;
   color: #3d3448 !important;
 }
 .form-control:focus,
 .form-select:focus {
-  border-color: #c2458b !important;
-  box-shadow: 0 0 0 0.2rem rgba(194, 69, 139, 0.12) !important;
+  border-color: #d63384 !important;
+  box-shadow: 0 0 0 0.2rem rgba(214, 51, 132, 0.12) !important;
 }
 .form-label {
   color: #5a4d65 !important;
@@ -98,21 +98,21 @@
 
 /* ---- Botones primary ---- */
 .btn-primary {
-  background-color: #c2458b !important;
-  border-color: #c2458b !important;
+  background-color: #d63384 !important;
+  border-color: #d63384 !important;
   color: #ffffff !important;
 }
 .btn-primary:hover,
 .btn-primary:focus {
-  background-color: #a8377a !important;
-  border-color: #a8377a !important;
+  background-color: #a9236b !important;
+  border-color: #a9236b !important;
 }
 .btn-outline-primary {
-  border-color: #c2458b !important;
-  color: #c2458b !important;
+  border-color: #d63384 !important;
+  color: #d63384 !important;
 }
 .btn-outline-primary:hover {
-  background-color: #c2458b !important;
+  background-color: #d63384 !important;
   color: #ffffff !important;
 }
 
@@ -122,10 +122,10 @@
   color: #3d3448 !important;
 }
 .swal2-title {
-  color: #c2458b !important;
+  color: #d63384 !important;
 }
 .swal2-confirm {
-  background-color: #c2458b !important;
+  background-color: #d63384 !important;
 }
 
 /* ---- Page title ---- */
@@ -135,7 +135,7 @@
 
 /* ---- Breadcrumbs ---- */
 .breadcrumb-item a {
-  color: #c2458b !important;
+  color: #d63384 !important;
 }
 .breadcrumb-item.active {
   color: #7a6d82 !important;
@@ -143,21 +143,44 @@
 
 /* ---- Badge primary ---- */
 .badge.bg-primary {
-  background-color: #c2458b !important;
+  background-color: #d63384 !important;
 }
 
 /* ---- Links ---- */
 a {
-  color: #c2458b;
+  color: #d63384;
 }
 a:hover {
-  color: #a8377a;
+  color: #a9236b;
 }
 
 /* ---- DataTables overrides ---- */
 .dataTables_wrapper .dataTables_paginate .paginate_button.current,
 .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
-  background: #c2458b !important;
+  background: #d63384 !important;
   color: #ffffff !important;
-  border-color: #c2458b !important;
+  border-color: #d63384 !important;
+}
+
+/* ---- Modernidad del club: radio y sombra suaves (sin franjas laterales) ---- */
+.card {
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(45, 20, 61, 0.06) !important;
+}
+.btn {
+  border-radius: 10px !important;
+}
+.form-control,
+.form-select {
+  border-radius: 10px !important;
+}
+:focus-visible {
+  outline: 2px solid #d63384 !important;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

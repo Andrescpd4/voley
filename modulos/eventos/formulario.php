@@ -175,10 +175,10 @@ function eveFormatearFecha(fecha_iso) {
 <!-- ============================================================ -->
 <!-- CONTENEDOR PRINCIPAL CON PESTAÑAS                           -->
 <!-- ============================================================ -->
-<div class="container-fluid">
+<div class="tab-content">
     <div class="row">
         <div class="col-md-12">
-            <div class="card">
+            <div class="row">
                 <div class="card-body">
                     <!-- Nav Tabs estilo Velzon -->
                     <ul class="nav nav-tabs mb-3" id="eventosTabs" role="tablist">
